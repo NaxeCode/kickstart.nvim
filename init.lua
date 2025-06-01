@@ -156,6 +156,10 @@ vim.opt.cursorline = true
 -- Minimal number of screen lines to keep above and below the cursor.
 vim.opt.scrolloff = 10
 
+-- Tab and indentation settings
+vim.opt.tabstop = 4
+vim.opt.shiftwidth = 4
+
 -- if performing an operation that would fail due to unsaved changes in the buffer (like `:q`),
 -- instead raise a dialog asking if you wish to save the current file(s)
 -- See `:help 'confirm'`
@@ -273,7 +277,69 @@ require('lazy').setup({
         topdelete = { text = '‾' },
         changedelete = { text = '~' },
       },
+      -- Configure for jujutsu
+      _git_version = '2.30.0',
+      on_attach = function(bufnr)
+        local gitsigns = require 'gitsigns'
+
+        local function map(mode, l, r, opts)
+          opts = opts or {}
+          opts.buffer = bufnr
+          vim.keymap.set(mode, l, r, opts)
+        end
+
+        -- Navigation
+        map('n', ']c', function()
+          if vim.wo.diff then
+            vim.cmd.normal { ']c', bang = true }
+          else
+            gitsigns.nav_hunk 'next'
+          end
+        end, { desc = 'Next Hunk' })
+
+        map('n', '[c', function()
+          if vim.wo.diff then
+            vim.cmd.normal { '[c', bang = true }
+          else
+            gitsigns.nav_hunk 'prev'
+          end
+        end, { desc = 'Previous Hunk' })
+
+        -- Actions for both git and jj
+        map('n', '<leader>hs', gitsigns.stage_hunk, { desc = 'Stage hunk' })
+        map('n', '<leader>hr', gitsigns.reset_hunk, { desc = 'Reset hunk' })
+        map('v', '<leader>hs', function()
+          gitsigns.stage_hunk { vim.fn.line '.', vim.fn.line 'v' }
+        end, { desc = 'Stage hunk' })
+        map('v', '<leader>hr', function()
+          gitsigns.reset_hunk { vim.fn.line '.', vim.fn.line 'v' }
+        end, { desc = 'Reset hunk' })
+        map('n', '<leader>hS', gitsigns.stage_buffer, { desc = 'Stage buffer' })
+        map('n', '<leader>hu', gitsigns.undo_stage_hunk, { desc = 'Undo stage hunk' })
+        map('n', '<leader>hR', gitsigns.reset_buffer, { desc = 'Reset buffer' })
+        map('n', '<leader>hp', gitsigns.preview_hunk, { desc = 'Preview hunk' })
+        map('n', '<leader>hb', function()
+          gitsigns.blame_line { full = true }
+        end, { desc = 'Blame line' })
+        map('n', '<leader>tb', gitsigns.toggle_current_line_blame, { desc = 'Toggle line blame' })
+        map('n', '<leader>hd', gitsigns.diffthis, { desc = 'Diff this' })
+        map('n', '<leader>hD', function()
+          gitsigns.diffthis '~'
+        end, { desc = 'Diff this ~' })
+        map('n', '<leader>td', gitsigns.toggle_deleted, { desc = 'Toggle deleted' })
+
+        -- Text object
+        map({ 'o', 'x' }, 'ih', ':<C-U>Gitsigns select_hunk<CR>', { desc = 'Select hunk' })
+      end,
     },
+  },
+  -- Add jujutsu-specific plugin
+  {
+    'julienvincent/hunk.nvim',
+    cmd = { 'DiffEditor' },
+    config = function()
+      require('hunk').setup {}
+    end,
   },
 
   {
@@ -348,6 +414,8 @@ require('lazy').setup({
         { '<leader>s', group = '[S]earch' },
         { '<leader>t', group = '[T]oggle' },
         { '<leader>h', group = 'Git [H]unk', mode = { 'n', 'v' } },
+        { '<leader>j', group = '[J]ujutsu' }, -- Add this line
+        { '<leader>c', group = '[C]Make' }, -- Add this line for CMake
       },
     },
   },
@@ -460,6 +528,23 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>sn', function()
         builtin.find_files { cwd = vim.fn.stdpath 'config' }
       end, { desc = '[S]earch [N]eovim files' })
+
+      -- Jujutsu telescope integration
+      vim.keymap.set('n', '<leader>jf', function()
+        require('telescope.builtin').find_files {
+          prompt_title = 'JJ Files',
+          find_command = { 'jj', 'files' },
+        }
+      end, { desc = 'JJ: Find tracked files' })
+
+      vim.keymap.set('n', '<leader>jg', function()
+        require('telescope.builtin').live_grep {
+          prompt_title = 'JJ Grep',
+          additional_args = function()
+            return { '--follow' }
+          end,
+        }
+      end, { desc = 'JJ: Live grep in tracked files' })
     end,
   },
 
@@ -672,7 +757,25 @@ require('lazy').setup({
       --  - settings (table): Override the default settings passed when initializing the server.
       --        For example, to see the options for `lua_ls`, you could go to: https://luals.github.io/wiki/settings/
       local servers = {
-        -- clangd = {},
+        clangd = {
+          cmd = {
+            'clangd',
+            '--background-index',
+            '--clang-tidy',
+            '--header-insertion=iwyu',
+            '--completion-style=detailed',
+            '--function-arg-placeholders',
+            '--fallback-style=llvm',
+          },
+          init_options = {
+            usePlaceholders = true,
+            completeUnimported = true,
+            clangdFileStatus = true,
+          },
+          capabilities = {
+            offsetEncoding = { 'utf-16' },
+          },
+        },
         -- gopls = {},
         -- pyright = {},
         -- rust_analyzer = {},
@@ -727,6 +830,10 @@ require('lazy').setup({
       vim.list_extend(ensure_installed, {
         'stylua', -- Used to format Lua code
         'tailwindcss-language-server',
+        'clangd',
+        'clang-format',
+        'cmake-language-server',
+        'cpptools',
       })
       require('mason-tool-installer').setup { ensure_installed = ensure_installed }
 
@@ -767,7 +874,8 @@ require('lazy').setup({
         -- Disable "format_on_save lsp_fallback" for languages that don't
         -- have a well standardized coding style. You can add additional
         -- languages here or re-enable it for the disabled ones.
-        local disable_filetypes = { c = true, cpp = true }
+        -- local disable_filetypes = { c = true, cpp = true }
+        local disable_filetypes = {}
         if disable_filetypes[vim.bo[bufnr].filetype] then
           return nil
         else
@@ -790,6 +898,8 @@ require('lazy').setup({
         svelte = { 'prettierd' },
         json = { 'prettierd' },
 
+        c = { 'clang-format' },
+        cpp = { 'clang-format' },
         -- C# commented out
         --c_sharp = { 'csharpier' },
 
@@ -1098,6 +1208,105 @@ require('lazy').setup({
     },
   },
 
+  -- C++ Plugins Section:
+  -- CMake support
+  {
+    'Civitasv/cmake-tools.nvim',
+    ft = { 'c', 'cpp', 'cmake' },
+    dependencies = { 'nvim-lua/plenary.nvim' },
+    opts = {
+      cmake_command = 'cmake',
+      cmake_build_directory = 'build',
+      cmake_generate_options = { '-DCMAKE_EXPORT_COMPILE_COMMANDS=1' },
+      cmake_build_options = {},
+      cmake_console_size = 10,
+      cmake_show_console = 'always',
+    },
+    config = function(_, opts)
+      require('cmake-tools').setup(opts)
+
+      -- Add keymaps for CMake
+      vim.keymap.set('n', '<leader>cg', '<cmd>CMakeGenerate<cr>', { desc = '[C]Make [G]enerate' })
+      vim.keymap.set('n', '<leader>cb', '<cmd>CMakeBuild<cr>', { desc = '[C]Make [B]uild' })
+      vim.keymap.set('n', '<leader>cr', '<cmd>CMakeRun<cr>', { desc = '[C]Make [R]un' })
+      vim.keymap.set('n', '<leader>cd', '<cmd>CMakeDebug<cr>', { desc = '[C]Make [D]ebug' })
+      vim.keymap.set('n', '<leader>cc', '<cmd>CMakeClean<cr>', { desc = '[C]Make [C]lean' })
+    end,
+  },
+
+  -- Enhanced C++ syntax highlighting
+  {
+    'bfrg/vim-cpp-modern',
+    ft = { 'c', 'cpp' },
+  },
+
+  -- Debugging support (uncomment the debug plugins you had commented)
+  {
+    'mfussenegger/nvim-dap',
+    dependencies = {
+      'rcarriga/nvim-dap-ui',
+      'williamboman/mason.nvim',
+      'jay-babu/mason-nvim-dap.nvim',
+      'nvim-neotest/nvim-nio',
+    },
+    config = function()
+      local dap = require 'dap'
+      local dapui = require 'dapui'
+
+      -- Setup dap-ui
+      dapui.setup()
+
+      -- C++ debugging configuration
+      dap.adapters.cppdbg = {
+        id = 'cppdbg',
+        type = 'executable',
+        command = vim.fn.stdpath 'data' .. '/mason/bin/OpenDebugAD7',
+      }
+
+      dap.configurations.cpp = {
+        {
+          name = 'Launch file',
+          type = 'cppdbg',
+          request = 'launch',
+          program = function()
+            return vim.fn.input('Path to executable: ', vim.fn.getcwd() .. '/', 'file')
+          end,
+          cwd = '${workspaceFolder}',
+          stopAtEntry = true,
+        },
+      }
+      dap.configurations.c = dap.configurations.cpp
+
+      -- Keymaps for debugging
+      vim.keymap.set('n', '<F5>', dap.continue, { desc = 'Debug: Start/Continue' })
+      vim.keymap.set('n', '<F10>', dap.step_over, { desc = 'Debug: Step Over' })
+      vim.keymap.set('n', '<F11>', dap.step_into, { desc = 'Debug: Step Into' })
+      vim.keymap.set('n', '<F12>', dap.step_out, { desc = 'Debug: Step Out' })
+      vim.keymap.set('n', '<leader>b', dap.toggle_breakpoint, { desc = 'Debug: Toggle Breakpoint' })
+      vim.keymap.set('n', '<leader>B', function()
+        dap.set_breakpoint(vim.fn.input 'Breakpoint condition: ')
+      end, { desc = 'Debug: Set Conditional Breakpoint' })
+
+      -- Open/close dap-ui automatically
+      dap.listeners.after.event_initialized['dapui_config'] = dapui.open
+      dap.listeners.before.event_terminated['dapui_config'] = dapui.close
+      dap.listeners.before.event_exited['dapui_config'] = dapui.close
+    end,
+  },
+
+  {
+    'rcarriga/nvim-dap-ui',
+    keys = {
+      {
+        '<leader>du',
+        function()
+          require('dapui').toggle()
+        end,
+        desc = 'Debug: Toggle UI',
+      },
+    },
+  },
+
   -- C# LSP helper
   -- { 'Hoffs/omnisharp-extended-lsp.nvim', lazy = true },
 
@@ -1130,6 +1339,49 @@ require('lazy').setup({
     },
   },
 })
+
+-- Jujutsu integration
+vim.api.nvim_create_user_command('JJ', function(opts)
+  local cmd = 'jj ' .. opts.args
+  local output = vim.fn.system(cmd)
+  print(output)
+end, { nargs = '*', desc = 'Run jujutsu command' })
+
+-- Jujutsu keymaps
+local function jj_keymap(key, cmd, desc)
+  vim.keymap.set('n', '<leader>j' .. key, function()
+    vim.cmd('!' .. cmd)
+  end, { desc = 'JJ: ' .. desc })
+end
+
+-- Basic jj operations
+jj_keymap('s', 'jj status', 'Status')
+jj_keymap('l', 'jj log --oneline -r "all()" | head -20', 'Log (recent)')
+jj_keymap('d', 'jj diff', 'Diff')
+jj_keymap('c', 'jj commit -m "$(echo | head -1)"', 'Quick commit')
+jj_keymap('n', 'jj new', 'New change')
+jj_keymap('e', 'jj edit', 'Edit change')
+jj_keymap('p', 'jj git push', 'Push to git')
+jj_keymap('f', 'jj git fetch', 'Fetch from git')
+
+-- More advanced operations
+vim.keymap.set('n', '<leader>jC', function()
+  local msg = vim.fn.input 'Commit message: '
+  if msg ~= '' then
+    vim.cmd('!jj commit -m "' .. msg .. '"')
+  end
+end, { desc = 'JJ: Commit with message' })
+
+vim.keymap.set('n', '<leader>jb', function()
+  vim.cmd '!jj bookmark list'
+end, { desc = 'JJ: List bookmarks' })
+
+vim.keymap.set('n', '<leader>jB', function()
+  local name = vim.fn.input 'Bookmark name: '
+  if name ~= '' then
+    vim.cmd('!jj bookmark create ' .. name)
+  end
+end, { desc = 'JJ: Create bookmark' })
 
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
