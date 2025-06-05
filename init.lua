@@ -90,6 +90,9 @@ P.S. You can delete this when you're done too. It's your config now! :)
 vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
 
+-- For NuShell to convert all \ to /
+-- vim.opt.shellslash = true
+
 -- Set to true if you have a Nerd Font installed and selected in the terminal
 vim.g.have_nerd_font = true
 
@@ -700,6 +703,17 @@ require('lazy').setup({
           },
         },
         eslint = {},
+
+        -- JSON LSP:
+        jsonls = {
+          -- The real power of JSON-LS is live-validation with schemas ✨
+          settings = {
+            json = {
+              schemas = require('schemastore').json.schemas(),
+              validate = { enable = true },
+            },
+          },
+        },
         -- C# commented out till kinks ironed out
         --omnisharp = {
         --handlers = {
@@ -922,6 +936,9 @@ require('lazy').setup({
   { -- Collection of various small independent plugins/modules
     'echasnovski/mini.nvim',
     config = function()
+      -- Autopairs () {} [] "" <- like this
+      require('mini.pairs').setup()
+
       -- Better Around/Inside textobjects
       --
       -- Examples:
@@ -1035,12 +1052,12 @@ require('lazy').setup({
     'mikavilpas/yazi.nvim',
     event = 'VeryLazy',
     dependencies = {
-      -- check the installation instructions at
-      -- https://github.com/folke/snacks.nvim
+      --check the installation instructions at
+      --https://github.com/folke/snacks.nvim
       'folke/snacks.nvim',
     },
     keys = {
-      -- 👇 in this section, choose your own keymappings!
+      --👇 in this section, choose your own keymappings!
       {
         '<leader>-',
         mode = { 'n', 'v' },
@@ -1048,7 +1065,7 @@ require('lazy').setup({
         desc = 'Open yazi at the current file',
       },
       {
-        -- Open in the current working directory
+        --Open in the current working directory
         '<leader>cw',
         '<cmd>Yazi cwd<cr>',
         desc = "Open the file manager in nvim's working directory",
@@ -1061,16 +1078,16 @@ require('lazy').setup({
     },
     ---@type YaziConfig | {}
     opts = {
-      -- if you want to open yazi instead of netrw, see below for more info
+      --if you want to open yazi instead of netrw, see below for more info
       open_for_directories = false,
       keymaps = {
         show_help = '<f1>',
       },
     },
-    -- 👇 if you use `open_for_directories=true`, this is recommended
+    --👇 if you use `open_for_directories=true`, this is recommended
     init = function()
-      -- More details: https://github.com/mikavilpas/yazi.nvim/issues/802
-      -- vim.g.loaded_netrw = 1
+      --More details: https://github.com/mikavilpas/yazi.nvim/issues/802
+      vim.g.loaded_netrw = 1
       vim.g.loaded_netrwPlugin = 1
     end,
   },
@@ -1089,6 +1106,9 @@ require('lazy').setup({
       },
     },
   },
+
+  -- JSON schemas for the vscode-json language server
+  { 'b0o/schemastore.nvim', lazy = true },
 
   -- C# LSP helper
   -- { 'Hoffs/omnisharp-extended-lsp.nvim', lazy = true },
