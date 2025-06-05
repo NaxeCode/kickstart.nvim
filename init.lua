@@ -8,7 +8,7 @@
 ========         |.-""""""""""""""""""-.|   |-----|          ========
 ========         ||                    ||   | === |          ========
 ========         ||   KICKSTART.NVIM   ||   |-----|          ========
-========         ||                    ||   | === |          ========
+========         ||      NaxeCode      ||   | === |          ========
 ========         ||                    ||   |-----|          ========
 ========         ||:Tutor              ||   |:::::|          ========
 ========         |'-..................-'|   |____o|          ========
@@ -714,6 +714,7 @@ require('lazy').setup({
             },
           },
         },
+        tailwindcss = {},
         -- C# commented out till kinks ironed out
         --omnisharp = {
         --handlers = {
@@ -739,6 +740,7 @@ require('lazy').setup({
       local ensure_installed = vim.tbl_keys(servers or {})
       vim.list_extend(ensure_installed, {
         'stylua', -- Used to format Lua code
+        'tailwindcss-language-server',
       })
       require('mason-tool-installer').setup { ensure_installed = ensure_installed }
 
@@ -791,10 +793,15 @@ require('lazy').setup({
       end,
       formatters_by_ft = {
         lua = { 'stylua' },
-        javascript = { 'stylua' },
+
+        html = { 'prettierd' },
+        css = { 'prettierd' },
+        javascript = { 'prettierd', 'eslint_d', stop_after_first = true },
         javascriptreact = { 'prettierd', 'eslint_d', stop_after_first = true },
         typescript = { 'prettierd', 'eslint_d', stop_after_first = true },
         typescriptreact = { 'prettierd', 'eslint_d', stop_after_first = true },
+        vue = { 'prettierd', 'eslint_d', stop_after_first = true },
+        svelte = { 'prettierd' },
         json = { 'prettierd' },
 
         -- C# commented out
@@ -984,6 +991,7 @@ require('lazy').setup({
         'c',
         'diff',
         'html',
+        'css',
         'lua',
         'luadoc',
         'markdown',
