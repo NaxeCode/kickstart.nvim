@@ -1009,7 +1009,6 @@ require('lazy').setup({
         'tsx',
         'json',
         'jsonc',
-        'c_sharp',
       },
       -- Autoinstall languages that are not installed
       auto_install = true,
@@ -1058,16 +1057,6 @@ require('lazy').setup({
   -- you can continue same window with `<space>sr` which resumes last telescope search
   --
   -- NOTE: Custom Plugins section added by NaxeCode
-
-  -- Haxe tooling (syntax + build helpers)
-  {
-    'jdonaldson/vaxe',
-    ft = 'haxe', -- lazy-loads only for *.hx buffers
-    init = function() -- optional quality-of-life tweaks
-      -- Disable Vaxe’s built-in Omnicomplete so it doesn’t fight LSP
-      vim.g.vaxe_allow_omnifunc = 0
-    end,
-  },
 
   -- Yazi File Explorer:
   ---@type LazySpec
