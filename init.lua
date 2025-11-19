@@ -164,6 +164,13 @@ vim.opt.scrolloff = 10
 -- See `:help 'confirm'`
 vim.opt.confirm = true
 
+-- For Qunatum files:
+vim.filetype.add {
+  extension = {
+    quantum = 'json', -- <extension> = <filetype>
+  },
+}
+
 -- [[ Basic Keymaps ]]
 --  See `:help vim.keymap.set()`
 
