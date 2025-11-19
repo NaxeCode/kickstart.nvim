@@ -722,13 +722,6 @@ require('lazy').setup({
           },
         },
         tailwindcss = {},
-        -- C# commented out till kinks ironed out
-        --omnisharp = {
-        --handlers = {
-        --['textDocument/definition'] = require('omnisharp_extended').handler,
-        --},
-        --enable_editorconfig_support = true,
-        --},
       }
 
       -- Ensure the servers and tools above are installed
@@ -810,9 +803,6 @@ require('lazy').setup({
         vue = { 'prettierd', 'eslint_d', stop_after_first = true },
         svelte = { 'prettierd' },
         json = { 'prettierd' },
-
-        -- C# commented out
-        --c_sharp = { 'csharpier' },
 
         -- Conform can also run multiple formatters sequentially
         -- python = { "isort", "black" },
@@ -1134,9 +1124,6 @@ require('lazy').setup({
 
   -- JSON schemas for the vscode-json language server
   { 'b0o/schemastore.nvim', lazy = true },
-
-  -- C# LSP helper
-  -- { 'Hoffs/omnisharp-extended-lsp.nvim', lazy = true },
 
   -- Debug Adapter + UI (shared by all langs)
   -- { 'mfussenegger/nvim-dap' },
