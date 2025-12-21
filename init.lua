@@ -1,4 +1,4 @@
-﻿--[[
+--[[
 
 =====================================================================
 ==================== READ THIS BEFORE CONTINUING ====================
@@ -8,7 +8,7 @@
 ========         |.-""""""""""""""""""-.|   |-----|          ========
 ========         ||                    ||   | === |          ========
 ========         ||   KICKSTART.NVIM   ||   |-----|          ========
-========         ||                    ||   | === |          ========
+========         ||      NaxeCode      ||   | === |          ========
 ========         ||                    ||   |-----|          ========
 ========         ||:Tutor              ||   |:::::|          ========
 ========         |'-..................-'|   |____o|          ========
@@ -90,8 +90,11 @@ P.S. You can delete this when you're done too. It's your config now! :)
 vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
 
+-- For NuShell to convert all \ to /
+-- vim.opt.shellslash = true
+
 -- Set to true if you have a Nerd Font installed and selected in the terminal
-vim.g.have_nerd_font = false
+vim.g.have_nerd_font = true
 
 -- [[ Setting options ]]
 -- See `:help vim.o`
@@ -165,6 +168,13 @@ vim.o.scrolloff = 10
 -- instead raise a dialog asking if you wish to save the current file(s)
 -- See `:help 'confirm'`
 vim.o.confirm = true
+
+-- For Qunatum files:
+vim.filetype.add {
+  extension = {
+    quantum = 'json', -- <extension> = <filetype>
+  },
+}
 
 -- [[ Basic Keymaps ]]
 --  See `:help vim.keymap.set()`
@@ -281,6 +291,15 @@ require('lazy').setup({
         topdelete = { text = '‾' },
         changedelete = { text = '~' },
       },
+    },
+  },
+
+  {
+    'numToStr/Comment.nvim',
+    opts = {},
+    keys = {
+      { 'gcc', mode = 'n', desc = 'Comment line' },
+      { 'gc', mode = { 'n', 'x' }, desc = 'Comment selection' },
     },
   },
 
@@ -705,6 +724,19 @@ require('lazy').setup({
             },
           },
         },
+        eslint = {},
+
+        -- JSON LSP:
+        jsonls = {
+          -- The real power of JSON-LS is live-validation with schemas ✨
+          settings = {
+            json = {
+              schemas = require('schemastore').json.schemas(),
+              validate = { enable = true },
+            },
+          },
+        },
+        tailwindcss = {},
       }
 
       -- Ensure the servers and tools above are installed
@@ -722,6 +754,8 @@ require('lazy').setup({
       -- for you, so that they are available from within Neovim.
       local mason_map = {
         tsserver = 'typescript-language-server',
+        tailwindcss = 'tailwindcss-language-server',
+        eslint = 'eslint-lsp',
       }
 
       local ensure_installed = vim.tbl_keys(servers or {})
@@ -1024,6 +1058,9 @@ require('lazy').setup({
   { -- Collection of various small independent plugins/modules
     'echasnovski/mini.nvim',
     config = function()
+      -- Autopairs () {} [] "" <- like this
+      require('mini.pairs').setup()
+
       -- Better Around/Inside textobjects
       --
       -- Examples:
@@ -1110,12 +1147,87 @@ require('lazy').setup({
   --    This is the easiest way to modularize your config.
   --
   --  Uncomment the following line and add your plugins to `lua/custom/plugins/*.lua` to get going.
-  -- { import = 'custom.plugins' },
+  --  { import = 'custom.plugins' },
   --
   -- For additional information with loading, sourcing and examples see `:help lazy.nvim-🔌-plugin-spec`
   -- Or use telescope!
   -- In normal mode type `<space>sh` then write `lazy.nvim-plugin`
   -- you can continue same window with `<space>sr` which resumes last telescope search
+  --
+  -- NOTE: Custom Plugins section added by NaxeCode
+
+  -- Yazi File Explorer:
+  ---@type LazySpec
+  {
+    'mikavilpas/yazi.nvim',
+    event = 'VeryLazy',
+    dependencies = {
+      --check the installation instructions at
+      --https://github.com/folke/snacks.nvim
+      'folke/snacks.nvim',
+    },
+    keys = {
+      --👇 in this section, choose your own keymappings!
+      {
+        '<leader>-',
+        mode = { 'n', 'v' },
+        '<cmd>Yazi<cr>',
+        desc = 'Open yazi at the current file',
+      },
+      {
+        --Open in the current working directory
+        '<leader>cw',
+        '<cmd>Yazi cwd<cr>',
+        desc = "Open the file manager in nvim's working directory",
+      },
+      {
+        '<c-up>',
+        '<cmd>Yazi toggle<cr>',
+        desc = 'Resume the last yazi session',
+      },
+    },
+    ---@type YaziConfig | {}
+    opts = {
+      --if you want to open yazi instead of netrw, see below for more info
+      open_for_directories = false,
+      keymaps = {
+        show_help = '<f1>',
+      },
+    },
+    --👇 if you use `open_for_directories=true`, this is recommended
+    init = function()
+      --More details: https://github.com/mikavilpas/yazi.nvim/issues/802
+      vim.g.loaded_netrw = 1
+      vim.g.loaded_netrwPlugin = 1
+    end,
+  },
+
+  -- Extra JS/TS plugin
+  {
+    'pmizio/typescript-tools.nvim',
+    ft = { 'javascript', 'javascriptreact', 'typescript', 'typescriptreact', 'vue' },
+    dependencies = 'nvim-lua/plenary.nvim',
+    opts = {
+      settings = {
+        tsserver_file_preferences = {
+          includeCompletionsForModuleExports = true,
+          includeInlayParameterNameHints = 'all',
+        },
+      },
+    },
+  },
+
+  -- JSON schemas for the vscode-json language server
+  { 'b0o/schemastore.nvim', lazy = true },
+
+  -- Debug Adapter + UI (shared by all langs)
+  -- { 'mfussenegger/nvim-dap' },
+  -- { 'rcarriga/nvim-dap-ui', dependencies = 'mfussenegger/nvim-dap' },
+  -- {
+  -- 'jay-babu/mason-nvim-dap.nvim',
+  -- dependencies = { 'williamboman/mason.nvim', 'mfussenegger/nvim-dap' },
+  -- opts = { handlers = {} },
+  -- },
 }, {
   ui = {
     -- If you are using a Nerd Font: set icons to an empty table which will use the
@@ -1140,3 +1252,4 @@ require('lazy').setup({
 
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
+
