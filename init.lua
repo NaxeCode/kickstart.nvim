@@ -185,6 +185,7 @@ vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
 
 -- Diagnostic keymaps
 vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostic [Q]uickfix list' })
+vim.keymap.set('n', 'Q', '<cmd>q<CR>', { desc = 'Quit window' })
 
 -- Exit terminal mode in the builtin terminal with a shortcut that is a bit easier
 -- for people to discover. Otherwise, you normally need to press <C-\><C-n>, which
@@ -454,7 +455,12 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>sd', builtin.diagnostics, { desc = '[S]earch [D]iagnostics' })
       vim.keymap.set('n', '<leader>sr', builtin.resume, { desc = '[S]earch [R]esume' })
       vim.keymap.set('n', '<leader>s.', builtin.oldfiles, { desc = '[S]earch Recent Files ("." for repeat)' })
-      vim.keymap.set('n', '<leader><leader>', builtin.buffers, { desc = '[ ] Find existing buffers' })
+      vim.keymap.set('n', '<leader><leader>', function()
+        builtin.buffers {
+          sort_mru = true,
+          ignore_current_buffer = true,
+        }
+      end, { desc = '[ ] Find existing buffers (MRU)' })
 
       -- Slightly advanced example of overriding default behavior and theme
       vim.keymap.set('n', '<leader>/', function()
@@ -1019,9 +1025,58 @@ require('lazy').setup({
     main = 'ibl',
     event = 'BufReadPre',
     opts = {
-      indent = { char = '│' },
+      indent = { char = '|' },
       scope = { enabled = true },
     },
+  },
+
+  { -- Explorer sidebar
+    'nvim-neo-tree/neo-tree.nvim',
+    branch = 'v3.x',
+    dependencies = {
+      'nvim-lua/plenary.nvim',
+      'nvim-tree/nvim-web-devicons',
+      'MunifTanjim/nui.nvim',
+    },
+    keys = {
+      { '<leader>e', '<cmd>Neotree toggle<cr>', desc = 'Explorer (Neo-tree)' },
+    },
+    opts = {
+      filesystem = {
+        follow_current_file = { enabled = true },
+        hijack_netrw_behavior = 'open_default',
+      },
+      window = {
+        position = 'left',
+        width = 32,
+      },
+    },
+  },
+
+  { -- Buffer tabs
+    'akinsho/bufferline.nvim',
+    version = '*',
+    dependencies = 'nvim-tree/nvim-web-devicons',
+    event = 'VeryLazy',
+    opts = {
+      options = {
+        diagnostics = 'nvim_lsp',
+        separator_style = 'slant',
+        offsets = {
+          { filetype = 'neo-tree', text = 'Explorer', separator = true },
+        },
+      },
+    },
+  },
+
+  { -- Diagnostics list
+    'folke/trouble.nvim',
+    dependencies = { 'nvim-tree/nvim-web-devicons' },
+    keys = {
+      { '<leader>xx', '<cmd>Trouble diagnostics toggle<cr>', desc = 'Problems (Trouble)' },
+      { '<leader>xq', '<cmd>Trouble qflist toggle<cr>', desc = 'Quickfix (Trouble)' },
+    },
+    opts = {},
   },
 
   { -- Minimal statusline
