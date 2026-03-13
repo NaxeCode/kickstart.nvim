@@ -1,75 +1,51 @@
-vim.g.mapleader = ' '
-vim.g.maplocalleader = ' '
+local opt = vim.opt
 
--- For NuShell to convert all \\ to /
--- vim.opt.shellslash = true
+-- Line numbers
+opt.number = true
+opt.relativenumber = true
 
--- Set to true if you have a Nerd Font installed and selected in the terminal
-vim.g.have_nerd_font = true
+-- Tabs & Indents
+opt.tabstop = 2
+opt.shiftwidth = 2
+opt.expandtab = true
+opt.autoindent = true
 
--- Make line numbers default
-vim.o.number = true
-vim.o.relativenumber = true
+-- Search
+opt.ignorecase = true
+opt.smartcase = true
 
--- Enable mouse mode
-vim.o.mouse = 'a'
+-- Split windows
+opt.splitright = true
+opt.splitbelow = true
 
--- Don't show the mode, since it's already in the status line
-vim.o.showmode = false
+-- UI
+opt.termguicolors = true
+opt.background = 'dark'
+opt.cursorline = true
 
--- Sync clipboard between OS and Neovim.
-vim.schedule(function()
-  vim.o.clipboard = 'unnamedplus'
-end)
+-- Backups
+opt.backup = false
+opt.writebackup = false
+opt.swapfile = false
 
--- Enable break indent
-vim.o.breakindent = true
+-- Folding
+opt.foldmethod = 'indent'
+opt.foldlevel = 99
 
--- Save undo history
-vim.o.undofile = true
+-- File encoding
+opt.fileencoding = 'utf-8'
 
--- Case-insensitive searching unless capitals are used.
-vim.o.ignorecase = true
-vim.o.smartcase = true
+-- Command line
+opt.cmdheight = 1
 
--- Keep signcolumn on by default
-vim.o.signcolumn = 'yes'
+-- Completion
+opt.completeopt = { 'menuone', 'noselect' }
 
--- Decrease update time
-vim.o.updatetime = 250
+-- Better display for messages
+opt.shortmess:append 'c'
 
--- Decrease mapped sequence wait time
-vim.o.timeoutlen = 300
+-- Enable mouse
+opt.mouse = 'a'
 
--- Configure split behavior
-vim.o.splitright = true
-vim.o.splitbelow = true
-
--- Display whitespace chars
-vim.o.list = true
-vim.opt.listchars = { tab = '» ', trail = '·', nbsp = '␣' }
-
--- Preview substitutions live
-vim.o.inccommand = 'split'
-
--- Show cursor line
-vim.o.cursorline = true
-
--- Keep lines above/below cursor
-vim.o.scrolloff = 10
-
--- Indentation
-vim.opt.expandtab = true
-vim.opt.shiftwidth = 2
-vim.opt.tabstop = 2
-vim.opt.softtabstop = 2
-
--- Confirm unsaved changes on quit
-vim.o.confirm = true
-
--- For Quantum files
-vim.filetype.add {
-  extension = {
-    quantum = 'json',
-  },
-}
+-- Set clipboard to use system clipboard
+opt.clipboard = 'unnamedplus'
