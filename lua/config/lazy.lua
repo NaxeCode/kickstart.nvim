@@ -309,6 +309,7 @@ require('lazy').setup({
     'nvim-notify/nvim-notify',
     lazy = true,
     config = function()
+      local math = math -- Ensure math module is available
       require('notify').setup {
         timeout = 3000,
         max_height = function()
