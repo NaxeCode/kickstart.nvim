@@ -8,11 +8,6 @@ return {
     },
   },
   {
-    'windwp/nvim-autopairs',
-    event = 'InsertEnter',
-    opts = {},
-  },
-  {
     'NvChad/nvim-colorizer.lua',
     event = 'BufReadPre',
     opts = {
@@ -34,7 +29,6 @@ return {
   {
     'echasnovski/mini.nvim',
     config = function()
-      require('mini.pairs').setup()
       require('mini.ai').setup { n_lines = 500 }
       require('mini.surround').setup()
     end,

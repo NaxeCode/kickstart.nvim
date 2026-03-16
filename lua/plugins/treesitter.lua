@@ -6,6 +6,7 @@ return {
     ensure_installed = {
       'bash',
       'c',
+      'c_sharp',
       'css',
       'diff',
       'dockerfile',
