@@ -112,7 +112,10 @@ return {
             },
           },
         },
-        tailwindcss = {},
+        tailwindcss = {
+          filetypes = { 'html', 'css', 'scss', 'javascript', 'javascriptreact', 'typescript', 'typescriptreact', 'vue', 'svelte' },
+        },
+        nushell = {},
         lua_ls = {
           settings = {
             Lua = {
@@ -199,6 +202,7 @@ return {
     'saghen/blink.cmp',
     event = 'VimEnter',
     version = '1.*',
+    build = 'cargo build --release',
     dependencies = {
       {
         'L3MON4D3/LuaSnip',

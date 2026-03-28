@@ -18,6 +18,7 @@ return {
       'luadoc',
       'markdown',
       'markdown_inline',
+      'nu',
       'query',
       'toml',
       'tsx',
@@ -29,9 +30,8 @@ return {
     auto_install = true,
     highlight = {
       enable = true,
-      additional_vim_regex_highlighting = { 'ruby' },
     },
-    indent = { enable = true, disable = { 'ruby' } },
+    indent = { enable = true },
   },
   config = function(_, opts)
     require('nvim-treesitter').setup(opts)
