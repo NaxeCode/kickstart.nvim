@@ -10,5 +10,8 @@ return {
     document_color = {
       enabled = true,
     },
+    server = {
+      override = false, -- Disable internal setup to avoid deprecated lspconfig calls
+    },
   },
 }

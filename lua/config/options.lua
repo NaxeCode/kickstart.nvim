@@ -56,3 +56,14 @@ vim.opt.rtp:prepend(vim.fn.stdpath 'data' .. '/site')
 
 -- Set clipboard to use system clipboard
 opt.clipboard = 'unnamedplus'
+
+-- Silence the deprecated lspconfig warning (Neovim 0.11+ noise)
+if vim.fn.has 'nvim-0.11' == 1 then
+  local deprecate = vim.deprecate
+  vim.deprecate = function(name, alternative, version, plugin, backtrace)
+    if name and (name:find 'require%("lspconfig"%)' or name:find "require%('lspconfig'%)") then
+      return
+    end
+    return deprecate(name, alternative, version, plugin, backtrace)
+  end
+end
