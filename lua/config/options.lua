@@ -20,7 +20,6 @@ opt.splitbelow = true
 
 -- UI
 opt.termguicolors = true
-opt.background = 'dark'
 opt.cursorline = true
 
 -- Backups

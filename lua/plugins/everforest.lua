@@ -3,11 +3,18 @@ return {
   lazy = false,
   priority = 1000,
   config = function()
-    -- Option is-bit-needed if you want to use the 'hard' variant
-    vim.g.everforest_background = 'hard'
-    -- For better performance
+    vim.g.everforest_background = 'medium'
     vim.g.everforest_better_performance = 1
-    
+
+    -- Read theme state file set by switch-theme.sh
+    local state_file = vim.fn.expand '~/.config/theme'
+    local f = io.open(state_file, 'r')
+    if f then
+      local theme = f:read '*l'
+      f:close()
+      vim.o.background = (theme == 'light') and 'light' or 'dark'
+    end
+
     vim.cmd.colorscheme 'everforest'
   end,
 }

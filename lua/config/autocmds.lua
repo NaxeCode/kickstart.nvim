@@ -1,3 +1,29 @@
+-- Global theme switcher — called directly via socket from switch-theme.sh
+_G.switch_everforest_theme = function(bg)
+  vim.o.background = bg
+  vim.cmd.colorscheme 'everforest'
+  vim.schedule(function()
+    pcall(function() require('lualine').setup() end)
+  end)
+end
+
+-- Live theme switching: re-read ~/.config/theme whenever Neovim regains focus
+local _theme_file = vim.fn.expand '~/.config/theme'
+local _last_bg = vim.o.background
+vim.api.nvim_create_autocmd('FocusGained', {
+  callback = function()
+    local f = io.open(_theme_file, 'r')
+    if not f then return end
+    local theme = f:read '*l'
+    f:close()
+    local bg = (theme == 'light') and 'light' or 'dark'
+    if bg ~= _last_bg then
+      _last_bg = bg
+      _G.switch_everforest_theme(bg)
+    end
+  end,
+})
+
 vim.api.nvim_create_autocmd('FileType', {
   pattern = 'cs',
   callback = function()
