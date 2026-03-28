@@ -141,7 +141,10 @@ return {
         eslint = 'eslint-lsp',
       }
 
-      local ensure_installed = vim.tbl_keys(servers or {})
+      local ensure_installed = vim.tbl_filter(function(name)
+        return name ~= 'nushell'
+      end, vim.tbl_keys(servers or {}))
+
       ensure_installed = vim.tbl_map(function(server)
         return mason_map[server] or server
       end, ensure_installed)
