@@ -35,5 +35,12 @@ return {
   },
   config = function(_, opts)
     require('nvim-treesitter').setup(opts)
+    -- Ensure nu filetype uses treesitter highlighting
+    vim.api.nvim_create_autocmd({ 'BufRead', 'BufNewFile' }, {
+      pattern = '*.nu',
+      callback = function()
+        pcall(vim.treesitter.start)
+      end,
+    })
   end,
 }
