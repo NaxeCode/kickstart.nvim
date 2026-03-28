@@ -51,5 +51,8 @@ opt.mouse = 'a'
 vim.g.loaded_ruby_provider = 0
 vim.g.loaded_perl_provider = 0
 
+-- Fix treesitter parser path
+vim.opt.rtp:prepend(vim.fn.stdpath 'data' .. '/site')
+
 -- Set clipboard to use system clipboard
 opt.clipboard = 'unnamedplus'

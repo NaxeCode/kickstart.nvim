@@ -114,6 +114,14 @@ return {
         },
         tailwindcss = {
           filetypes = { 'html', 'css', 'scss', 'javascript', 'javascriptreact', 'typescript', 'typescriptreact', 'vue', 'svelte' },
+          settings = {
+            tailwindCSS = {
+              includeLanguages = {
+                typescript = 'javascript',
+                typescriptreact = 'javascriptreact',
+              },
+            },
+          },
         },
         nushell = {},
         lua_ls = {
