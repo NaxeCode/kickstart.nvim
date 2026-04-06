@@ -58,6 +58,8 @@ return {
         local ok, lang = pcall(vim.treesitter.language.get_lang, ft)
         if ok and lang then
           pcall(vim.treesitter.start, ev.buf, lang)
+          -- Enable treesitter-aware indentation for this buffer
+          vim.bo[ev.buf].indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
         end
       end,
     })
