@@ -1,5 +1,6 @@
 vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
+vim.g.have_nerd_font = true
 
 local opt = vim.opt
 
@@ -55,6 +56,9 @@ vim.g.loaded_perl_provider = 0
 
 -- Fix treesitter parser path
 vim.opt.rtp:prepend(vim.fn.stdpath 'data' .. '/site')
+
+-- Register .nu filetype early so treesitter highlighting activates on open
+vim.filetype.add { extension = { nu = 'nu' } }
 
 -- Set clipboard to use system clipboard
 opt.clipboard = 'unnamedplus'

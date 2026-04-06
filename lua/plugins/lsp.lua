@@ -92,15 +92,6 @@ return {
         end,
       })
 
-      -- Ensure .nu files are recognized (fallback for older nvim or missing system ft)
-      if vim.filetype then
-        vim.filetype.add {
-          extension = {
-            nu = 'nu',
-          },
-        }
-      end
-
       -- Modern LSP Configuration (Neovim 0.11+)
       local capabilities = require('blink.cmp').get_lsp_capabilities()
 
@@ -170,7 +161,7 @@ return {
 
       -- Install non-LSP tools
       require('mason-tool-installer').setup {
-        ensure_installed = { 'stylua', 'prettier' },
+        ensure_installed = { 'stylua', 'prettier', 'markdownlint-cli2' },
       }
     end,
   },
