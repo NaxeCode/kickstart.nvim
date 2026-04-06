@@ -1,4 +1,4 @@
-# Gemini Instructions: Neovim Configuration (Kickstart Fork)
+# Claude Instructions: Neovim Configuration (Kickstart Fork)
 
 This repository is a highly optimized, modular fork of `kickstart.nvim` tailored for a high-performance Arch Linux development environment (Ryzen 5900XT / Radeon 7900 XTX).
 

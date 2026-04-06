@@ -1,4 +1,6 @@
-# Gemini Instructions: Neovim Configuration (Kickstart Fork)
+# Agent Instructions: Neovim Configuration (Kickstart Fork)
+
+*(These instructions apply to all AI assistants including Codex CLI, Cursor, and others)*
 
 This repository is a highly optimized, modular fork of `kickstart.nvim` tailored for a high-performance Arch Linux development environment (Ryzen 5900XT / Radeon 7900 XTX).
 

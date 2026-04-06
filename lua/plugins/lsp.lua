@@ -92,6 +92,15 @@ return {
         end,
       })
 
+      -- Ensure .nu files are recognized (fallback for older nvim or missing system ft)
+      if vim.filetype then
+        vim.filetype.add {
+          extension = {
+            nu = 'nu',
+          },
+        }
+      end
+
       -- Modern LSP Configuration (Neovim 0.11+)
       local capabilities = require('blink.cmp').get_lsp_capabilities()
 
@@ -119,7 +128,13 @@ return {
             },
           },
         },
-        nushell = {},
+        nushell = {
+          cmd = { 'nu', '--lsp' },
+          filetypes = { 'nu' },
+          root_dir = function()
+            return vim.fs.root(0, { '.git' }) or vim.uv.cwd()
+          end,
+        },
         lua_ls = {
           settings = {
             Lua = {
@@ -136,7 +151,7 @@ return {
           function(server_name)
             local config = servers[server_name] or {}
             config.capabilities = vim.tbl_deep_extend('force', {}, capabilities, config.capabilities or {})
-            
+
             -- Use the new native config API if available, fallback to old for stability
             if vim.lsp.config then
               vim.lsp.config(server_name, config)
@@ -147,6 +162,11 @@ return {
           end,
         },
       }
+
+      -- Manually setup nushell since it's not in Mason (as per GEMINI.md)
+      local nushell_config = servers.nushell or {}
+      nushell_config.capabilities = vim.tbl_deep_extend('force', {}, capabilities, nushell_config.capabilities or {})
+      require('lspconfig').nushell.setup(nushell_config)
 
       -- Install non-LSP tools
       require('mason-tool-installer').setup {
