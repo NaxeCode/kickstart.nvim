@@ -51,7 +51,8 @@ opt.shortmess:append 'c'
 -- Enable mouse
 opt.mouse = 'a'
 
--- Disable providers we don't use
+-- Providers
+vim.g.python3_host_prog = vim.fn.expand '~/.local/share/nvim/python-provider/bin/python'
 vim.g.loaded_ruby_provider = 0
 vim.g.loaded_perl_provider = 0
 
