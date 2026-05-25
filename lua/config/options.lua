@@ -59,8 +59,34 @@ vim.g.loaded_perl_provider = 0
 -- Fix treesitter parser path
 vim.opt.rtp:prepend(vim.fn.stdpath 'data' .. '/site')
 
--- Register .nu filetype early so treesitter highlighting activates on open
-vim.filetype.add { extension = { nu = 'nu' } }
+-- Register filetypes early so treesitter/LSP health checks resolve cleanly.
+-- Some LSP configs advertise framework-specific filetypes whose names do not
+-- match normal filename extensions; mapping them to themselves keeps
+-- `:checkhealth vim.lsp` quiet without changing editor behavior.
+vim.filetype.add {
+  extension = {
+    nu = 'nu',
+    aspnetcorerazor = 'aspnetcorerazor',
+    ['astro-markdown'] = 'astro-markdown',
+    ['django-html'] = 'django-html',
+    edge = 'edge',
+    ejs = 'ejs',
+    erb = 'erb',
+    gohtml = 'gohtml',
+    gohtmltmpl = 'gohtmltmpl',
+    hbs = 'hbs',
+    ['html-eex'] = 'html-eex',
+    jade = 'jade',
+    leaf = 'leaf',
+    mdx = 'mdx',
+    njk = 'njk',
+    nunjucks = 'nunjucks',
+    slim = 'slim',
+    postcss = 'postcss',
+    sugarss = 'sugarss',
+    reason = 'reason',
+  },
+}
 
 -- Set clipboard to use system clipboard
 opt.clipboard = 'unnamedplus'
@@ -69,9 +95,7 @@ opt.clipboard = 'unnamedplus'
 if vim.fn.has 'nvim-0.11' == 1 then
   local deprecate = vim.deprecate
   vim.deprecate = function(name, alternative, version, plugin, backtrace)
-    if name and (name:find 'require%("lspconfig"%)' or name:find "require%('lspconfig'%)") then
-      return
-    end
+    if name and (name:find 'require%("lspconfig"%)' or name:find "require%('lspconfig'%)") then return end
     return deprecate(name, alternative, version, plugin, backtrace)
   end
 end
