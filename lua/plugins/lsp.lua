@@ -35,9 +35,7 @@ return {
         virtual_text = {
           source = 'if_many',
           spacing = 2,
-          format = function(diagnostic)
-            return diagnostic.message
-          end,
+          format = function(diagnostic) return diagnostic.message end,
         },
       }
 
@@ -85,9 +83,7 @@ return {
           end
 
           if client and client:supports_method('textDocument/inlayHint', event.buf) then
-            map('<leader>th', function()
-              vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled { bufnr = event.buf })
-            end, '[T]oggle Inlay [H]ints')
+            map('<leader>th', function() vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled { bufnr = event.buf }) end, '[T]oggle Inlay [H]ints')
           end
         end,
       })
@@ -122,9 +118,7 @@ return {
         nushell = {
           cmd = { 'nu', '--lsp' },
           filetypes = { 'nu' },
-          root_dir = function()
-            return vim.fs.root(0, { '.git' }) or vim.uv.cwd()
-          end,
+          root_dir = function() return vim.fs.root(0, { '.git' }) or vim.uv.cwd() end,
         },
         lua_ls = {
           settings = {
@@ -159,6 +153,61 @@ return {
       nushell_config.capabilities = vim.tbl_deep_extend('force', {}, capabilities, nushell_config.capabilities or {})
       require('lspconfig').nushell.setup(nushell_config)
 
+      local function find_haxe_root(fname)
+        return vim.fs.root(fname, function(name) return name:match '%.hxml$' ~= nil end)
+          or vim.fs.root(fname, { 'Project.xml', 'project.xml', 'haxelib.json', '.git' })
+      end
+
+      local function find_haxe_display_args(root)
+        if not root then return { 'build.hxml' } end
+        local preferred = {
+          'display.hxml',
+          'display-hl.hxml',
+          'build.hxml',
+          'compile.hxml',
+          'test_hl.hxml',
+          'test.hxml',
+        }
+        for _, name in ipairs(preferred) do
+          if vim.uv.fs_stat(root .. '/' .. name) then return { name } end
+        end
+        local hxml = vim.fs.find(function(name) return name:match '%.hxml$' ~= nil end, { path = root, limit = 1 })[1]
+        return hxml and { vim.fs.basename(hxml) } or { 'build.hxml' }
+      end
+
+      local haxe_language_server = vim.fn.exepath 'haxe-language-server'
+      local haxe_config = {
+        cmd = { haxe_language_server },
+        filetypes = { 'haxe' },
+        capabilities = capabilities,
+        root_dir = function(bufnr, on_dir)
+          local fname = vim.api.nvim_buf_get_name(bufnr)
+          local root = find_haxe_root(fname)
+          if root then on_dir(root) end
+        end,
+        before_init = function(params, config)
+          config.init_options = config.init_options or {}
+          config.init_options.displayArguments = find_haxe_display_args(config.root_dir)
+          params.initializationOptions = config.init_options
+        end,
+        settings = {
+          haxe = {
+            executable = 'haxe',
+          },
+        },
+      }
+
+      if haxe_language_server ~= '' then
+        if vim.lsp.config then
+          vim.lsp.config('haxe_language_server', haxe_config)
+          vim.lsp.enable 'haxe_language_server'
+        else
+          require('lspconfig').haxe_language_server.setup(haxe_config)
+        end
+      else
+        vim.notify('haxe-language-server not found: ' .. haxe_language_server, vim.log.levels.WARN)
+      end
+
       -- Install non-LSP tools
       require('mason-tool-installer').setup {
         ensure_installed = { 'stylua', 'prettier', 'markdownlint-cli2' },
@@ -172,9 +221,7 @@ return {
     keys = {
       {
         '<leader>f',
-        function()
-          require('conform').format { async = true, lsp_format = 'fallback' }
-        end,
+        function() require('conform').format { async = true, lsp_format = 'fallback' } end,
         mode = '',
         desc = '[F]ormat buffer',
       },
@@ -183,9 +230,7 @@ return {
       notify_on_error = false,
       format_on_save = function(bufnr)
         local disable_filetypes = { c = true, cpp = true }
-        if disable_filetypes[vim.bo[bufnr].filetype] then
-          return nil
-        end
+        if disable_filetypes[vim.bo[bufnr].filetype] then return nil end
         return {
           timeout_ms = 500,
           lsp_format = 'fallback',
@@ -216,9 +261,7 @@ return {
         'L3MON4D3/LuaSnip',
         version = '2.*',
         build = (function()
-          if vim.fn.has 'win32' == 1 or vim.fn.executable 'make' == 0 then
-            return
-          end
+          if vim.fn.has 'win32' == 1 or vim.fn.executable 'make' == 0 then return end
           return 'make install_jsregexp'
         end)(),
         opts = {},

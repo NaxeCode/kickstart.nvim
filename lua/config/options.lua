@@ -65,6 +65,8 @@ vim.opt.rtp:prepend(vim.fn.stdpath 'data' .. '/site')
 -- `:checkhealth vim.lsp` quiet without changing editor behavior.
 vim.filetype.add {
   extension = {
+    hx = 'haxe',
+    hxml = 'hxml',
     nu = 'nu',
     aspnetcorerazor = 'aspnetcorerazor',
     ['astro-markdown'] = 'astro-markdown',
