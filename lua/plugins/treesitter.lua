@@ -15,6 +15,7 @@ local parsers = {
   'markdown',
   'markdown_inline',
   'nu',
+  'odin',
   'query',
   'toml',
   'tsx',
