@@ -54,7 +54,7 @@ return {
     local function task_components()
       return {
         { 'unique', replace = false, restart_interrupts = true },
-        { 'open_output', on_start = 'never', on_complete = 'failure', direction = 'dock', focus = false },
+        { 'open_output', on_start = 'always', on_complete = 'failure', direction = 'dock', focus = false },
         'default',
       }
     end
