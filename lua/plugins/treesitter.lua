@@ -77,7 +77,17 @@ return {
         local ok, lang = pcall(vim.treesitter.language.get_lang, ft)
         if ok and lang then
           pcall(vim.treesitter.start, ev.buf, lang)
-          -- Enable treesitter-aware indentation for this buffer
+
+          -- Haxe Tree-sitter highlighting works, but its indentation support is
+          -- incomplete and makes <Enter> drop block indentation in `.hx` files.
+          -- Use Vim's built-in C-like smart indent fallback for Haxe instead.
+          if ft == 'haxe' then
+            vim.bo[ev.buf].indentexpr = ''
+            vim.bo[ev.buf].smartindent = true
+            return
+          end
+
+          -- Enable treesitter-aware indentation for buffers with reliable indent support.
           vim.bo[ev.buf].indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
         end
       end,
