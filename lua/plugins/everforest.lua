@@ -16,10 +16,10 @@ local naxeforest = {
   red = '#e68183',
   orange = '#ff9e64',
   yellow = '#e2bd6b',
-  green = '#a9c97a',
+  green = '#86c9dc',
   blue = '#7faad6',
   aqua = '#86c9dc',
-  purple = '#d99ac2',
+  purple = '#9bb8d6',
   none = 'NONE',
 }
 
@@ -80,16 +80,23 @@ local function apply_highlights()
   hl(0, 'DiffDelete', { bg = '#443136' })
   hl(0, 'DiffText', { bg = '#4b3526' })
 
-  hl(0, '@keyword', { fg = naxeforest.purple })
+  hl(0, '@keyword', { fg = naxeforest.orange })
   hl(0, '@function', { fg = naxeforest.blue })
+  hl(0, '@function.call', { fg = naxeforest.blue })
   hl(0, '@function.method', { fg = naxeforest.blue })
-  hl(0, '@constructor', { fg = naxeforest.yellow })
+  hl(0, '@function.method.call', { fg = naxeforest.blue })
+  hl(0, '@method', { fg = naxeforest.blue })
+  hl(0, '@method.call', { fg = naxeforest.blue })
+  hl(0, '@constructor', { fg = naxeforest.orange })
   hl(0, '@type', { fg = naxeforest.yellow })
-  hl(0, '@string', { fg = naxeforest.green })
+  hl(0, '@type.builtin', { fg = naxeforest.yellow })
+  hl(0, '@string', { fg = naxeforest.aqua })
+  hl(0, '@string.escape', { fg = naxeforest.orange })
   hl(0, '@number', { fg = naxeforest.orange })
   hl(0, '@boolean', { fg = naxeforest.orange })
   hl(0, '@constant', { fg = naxeforest.orange })
   hl(0, '@property', { fg = naxeforest.aqua })
+  hl(0, '@variable.member', { fg = naxeforest.aqua })
   hl(0, '@variable.parameter', { fg = naxeforest.aqua, italic = true })
   hl(0, '@comment', { fg = naxeforest.subtext0, italic = true })
 end

@@ -8,7 +8,7 @@ local naxeforest = {
   orange = '#ff9e64',
   blue = '#7faad6',
   aqua = '#86c9dc',
-  green = '#a9c97a',
+  green = '#86c9dc',
   red = '#e68183',
 }
 
