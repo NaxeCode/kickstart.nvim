@@ -5,6 +5,31 @@ local function haxeflixel_root()
   return vim.fs.root(path, { 'Project.xml', 'project.xml' }) or vim.fs.root(path, function(name) return name:match '%.hxml$' ~= nil end)
 end
 
+local function is_haxeflixel_task(task, root)
+  if not (task.name and task.name:match '^HaxeFlixel:') then return false end
+  return not root or not task.cwd or task.cwd == root
+end
+
+local function stop_haxeflixel_tasks(opts)
+  opts = opts or {}
+  local root = haxeflixel_root()
+  local stopped = 0
+
+  for _, task in ipairs(require('overseer').list_tasks()) do
+    if is_haxeflixel_task(task, root) and task:is_running() and task:stop() then stopped = stopped + 1 end
+  end
+
+  if opts.notify ~= false then
+    if stopped > 0 then
+      vim.notify(('Stopped %d HaxeFlixel task%s.'):format(stopped, stopped == 1 and '' or 's'), vim.log.levels.INFO)
+    else
+      vim.notify('No running HaxeFlixel task found.', vim.log.levels.INFO)
+    end
+  end
+
+  return stopped
+end
+
 local function run_haxeflixel_task(name)
   local root = haxeflixel_root()
   if not root then
@@ -28,7 +53,8 @@ return {
 
     local function task_components()
       return {
-        { 'open_output', on_start = 'always', on_complete = 'failure', direction = 'dock', focus = false },
+        { 'unique', replace = false, restart_interrupts = true },
+        { 'open_output', on_start = 'never', on_complete = 'failure', direction = 'dock', focus = false },
         'default',
       }
     end
@@ -88,11 +114,12 @@ return {
   end,
   keys = {
     { '<leader>or', '<cmd>OverseerRun<cr>', desc = 'Overseer: Run task' },
-    { '<leader>ot', '<cmd>OverseerToggle<cr>', desc = 'Overseer: Task list' },
+    { '<leader>ot', '<cmd>OverseerOpen<cr>', desc = 'Overseer: Open task list' },
     { '<leader>oa', '<cmd>OverseerTaskAction<cr>', desc = 'Overseer: Task action' },
     { '<leader>os', '<cmd>OverseerShell<cr>', desc = 'Overseer: Shell task' },
     { '<leader>xb', function() run_haxeflixel_task 'HaxeFlixel: build HL debug' end, desc = 'HaxeFlixel: build HL debug' },
-    { '<leader>xr', function() run_haxeflixel_task 'HaxeFlixel: run HL debug' end, desc = 'HaxeFlixel: run HL debug' },
+    { '<leader>xr', function() run_haxeflixel_task 'HaxeFlixel: run HL debug' end, desc = 'HaxeFlixel: run/restart HL debug' },
+    { '<leader>xs', function() stop_haxeflixel_tasks() end, desc = 'HaxeFlixel: stop running task' },
     { '<leader>xl', function() run_haxeflixel_task 'HaxeFlixel: build Linux debug' end, desc = 'HaxeFlixel: build Linux debug' },
     { '<leader>xd', function() run_haxeflixel_task 'HaxeFlixel: generate display.hxml' end, desc = 'HaxeFlixel: generate display.hxml' },
     { '<leader>xc', function() run_haxeflixel_task 'Haxe: compile unit tests HL' end, desc = 'Haxe: compile unit tests HL' },
