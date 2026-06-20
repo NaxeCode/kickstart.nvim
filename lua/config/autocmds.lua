@@ -1,26 +1,22 @@
--- Global theme switcher — called directly via socket from switch-theme.sh
-_G.switch_everforest_theme = function(bg)
-  vim.o.background = bg
+-- Global theme switcher — called directly via socket from switch-theme.sh.
+-- Naxeforest is dark-only; keep the old function name for script compatibility.
+_G.switch_everforest_theme = function(_theme)
+  vim.o.background = 'dark'
   vim.cmd.colorscheme 'everforest'
   vim.schedule(function()
     pcall(function() require('lualine').setup() end)
   end)
 end
 
--- Live theme switching: re-read ~/.config/theme whenever Neovim regains focus
+-- Live theme refresh: re-apply Naxeforest when the dark theme state is touched.
 local _theme_file = vim.fn.expand '~/.config/theme'
-local _last_bg = vim.o.background
+local _last_theme_mtime = nil
 vim.api.nvim_create_autocmd('FocusGained', {
   callback = function()
-    local f = io.open(_theme_file, 'r')
-    if not f then return end
-    local theme = f:read '*l'
-    f:close()
-    local bg = (theme == 'light') and 'light' or 'dark'
-    if bg ~= _last_bg then
-      _last_bg = bg
-      _G.switch_everforest_theme(bg)
-    end
+    local stat = vim.uv.fs_stat(_theme_file)
+    if not stat or stat.mtime.sec == _last_theme_mtime then return end
+    _last_theme_mtime = stat.mtime.sec
+    _G.switch_everforest_theme('dark')
   end,
 })
 
