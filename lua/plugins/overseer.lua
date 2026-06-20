@@ -121,7 +121,7 @@ return {
     { '<leader>xr', function() run_haxeflixel_task 'HaxeFlixel: run HL debug' end, desc = 'HaxeFlixel: run/restart HL debug' },
     { '<leader>xs', function() stop_haxeflixel_tasks() end, desc = 'HaxeFlixel: stop running task' },
     { '<leader>xl', function() run_haxeflixel_task 'HaxeFlixel: build Linux debug' end, desc = 'HaxeFlixel: build Linux debug' },
-    { '<leader>xd', function() run_haxeflixel_task 'HaxeFlixel: generate display.hxml' end, desc = 'HaxeFlixel: generate display.hxml' },
+    { '<leader>xd', '<cmd>OverseerToggle<cr>', desc = 'HaxeFlixel: toggle Overseer dock' },
     { '<leader>xc', function() run_haxeflixel_task 'Haxe: compile unit tests HL' end, desc = 'Haxe: compile unit tests HL' },
     { '<leader>xt', function() run_haxeflixel_task 'Haxe: run unit tests HL' end, desc = 'Haxe: run unit tests HL' },
   },
