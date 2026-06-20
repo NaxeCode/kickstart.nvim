@@ -1,22 +1,24 @@
 local naxeforest = {
-  bg = '#1e2228',
-  bg_dim = '#181c21',
-  bg_dark = '#15191e',
-  bg1 = '#252b33',
-  bg2 = '#2d3440',
-  bg3 = '#3b4450',
-  bg4 = '#454e5c',
-  bg5 = '#58636d',
-  fg = '#d8d4bf',
-  subtext1 = '#9da8ad',
-  subtext0 = '#7f8c95',
-  overlay2 = '#6f7b84',
+  -- Blue-charcoal editor base. Slightly colder than Ghostty so code feels
+  -- submerged in blue undertones, while orange stays sharp and intentional.
+  bg = '#1b222b',
+  bg_dim = '#151b22',
+  bg_dark = '#11171d',
+  bg1 = '#222c37',
+  bg2 = '#2a3745',
+  bg3 = '#344456',
+  bg4 = '#405267',
+  bg5 = '#52677b',
+  fg = '#d8d5c4',
+  subtext1 = '#a2adb4',
+  subtext0 = '#81909b',
+  overlay2 = '#70808c',
   red = '#e68183',
   orange = '#ff9e64',
   yellow = '#e2bd6b',
   green = '#a9c97a',
-  blue = '#7fa6c9',
-  aqua = '#86c5d8',
+  blue = '#7faad6',
+  aqua = '#86c9dc',
   purple = '#d99ac2',
   none = 'NONE',
 }
@@ -73,10 +75,10 @@ local function apply_highlights()
   hl(0, 'DiagnosticWarn', { fg = naxeforest.orange })
   hl(0, 'DiagnosticInfo', { fg = naxeforest.blue })
   hl(0, 'DiagnosticHint', { fg = naxeforest.aqua })
-  hl(0, 'DiffAdd', { bg = '#263544' })
+  hl(0, 'DiffAdd', { bg = '#25384a' })
   hl(0, 'DiffChange', { bg = naxeforest.bg2 })
   hl(0, 'DiffDelete', { bg = '#443136' })
-  hl(0, 'DiffText', { bg = '#453224' })
+  hl(0, 'DiffText', { bg = '#4b3526' })
 
   hl(0, '@keyword', { fg = naxeforest.purple })
   hl(0, '@function', { fg = naxeforest.blue })
@@ -112,8 +114,8 @@ return {
       bg5 = color(naxeforest.bg5, '240'),
       bg_visual = color(naxeforest.bg3, '238'),
       bg_red = color('#443136', '52'),
-      bg_yellow = color('#453224', '136'),
-      bg_green = color('#263544', '22'),
+      bg_yellow = color('#4b3526', '136'),
+      bg_green = color('#25384a', '22'),
       bg_blue = color(naxeforest.bg2, '17'),
       bg_purple = color(naxeforest.bg2, '54'),
       fg = color(naxeforest.fg, '223'),
