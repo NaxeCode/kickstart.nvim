@@ -56,9 +56,19 @@ return {
       }
     end
 
-    register_haxe_task('HaxeFlixel: build HL debug', 'Compile HashLink debug target with Lime', 'lime', { 'build', 'hl', '-debug' })
+    register_haxe_task(
+      'HaxeFlixel: build HL debug',
+      'Refresh display.hxml, then compile HashLink debug target with Lime',
+      'bash',
+      { '-lc', 'SDL_VIDEODRIVER=x11 lime display hl -debug > display.hxml && SDL_VIDEODRIVER=x11 lime build hl -debug' }
+    )
 
-    register_haxe_task('HaxeFlixel: run HL debug', 'Run HashLink debug target with Lime', 'lime', { 'test', 'hl', '-debug' })
+    register_haxe_task(
+      'HaxeFlixel: run HL debug',
+      'Refresh display.hxml, then run HashLink debug target with Lime',
+      'bash',
+      { '-lc', 'SDL_VIDEODRIVER=x11 lime display hl -debug > display.hxml && SDL_VIDEODRIVER=x11 lime test hl -debug' }
+    )
 
     register_haxe_task('HaxeFlixel: build Linux debug', 'Compile native Linux debug target with Lime', 'lime', { 'build', 'linux', '-debug' })
 
