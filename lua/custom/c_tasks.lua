@@ -25,6 +25,26 @@ local WARN_FLAGS = '-std=c99 -Wall -Wextra'
 local DEBUG_BUILD = ('cc %s -g -O0 -fsanitize=address,undefined *.c -o game %s'):format(WARN_FLAGS, RAYLIB_FLAGS)
 local RELEASE_BUILD = ('cc %s -Os -DNDEBUG -ffunction-sections -fdata-sections -Wl,--gc-sections -s *.c -o game %s'):format(WARN_FLAGS, RAYLIB_FLAGS)
 
+local function size_report_command(root)
+    local build = has_makefile(root) and 'make release' or RELEASE_BUILD
+    return build
+        .. [[ && printf '\nFILE SIZE\n' \
+&& wc -c game \
+&& printf '\nSTATIC SECTIONS\n' \
+&& size game \
+&& printf '\nDYNAMIC DEPENDENCIES (OS libraries are allowed)\n' \
+&& if command -v ldd >/dev/null 2>&1; then deps="$(ldd ./game)"; \
+elif command -v otool >/dev/null 2>&1; then deps="$(otool -L ./game)"; \
+else deps="Dependency inspection unavailable"; fi; \
+printf '%s\n' "$deps"; \
+case "$deps" in *raylib*|*Raylib*|*RAYLIB*) \
+printf '\nINVALID RELEASE ARTIFACT: raylib is dynamically linked.\n'; \
+printf 'The file size above is not the self-contained release budget.\n'; \
+exit 2;; \
+esac; \
+printf '\nSELF-CONTAINED CHECK: raylib is included in the executable.\n']]
+end
+
 local function task_components(opts)
     opts = opts or {}
 
@@ -95,12 +115,9 @@ local function register_templates()
 
     register_c_task('C: clean', 'Remove build artifacts', function(root) return has_makefile(root) and 'make clean' or 'rm -f game *.o' end)
 
-    -- Binary size report - relevant for the size-optimization showcase.
-    register_c_task(
-        'C: size report',
-        'Build release and report stripped binary size',
-        function(root) return (has_makefile(root) and 'make release' or RELEASE_BUILD) .. ' && size game && ls -lh game && du -h game' end
-    )
+    -- The report fails while raylib is dynamically linked so a small launcher
+    -- cannot be mistaken for the self-contained release artifact.
+    register_c_task('C: size report', 'Build release; report file/static size and verify raylib is included', size_report_command)
 
     -- Generate compile_flags.txt so clangd resolves raylib.h and system headers
     -- without needing bear/compiledb. Run once per new project.
