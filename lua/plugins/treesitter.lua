@@ -9,7 +9,6 @@ local parsers = {
   'html',
   'javascript',
   'json',
-  'jsonc',
   'lua',
   'luadoc',
   'markdown',
@@ -48,6 +47,11 @@ return {
       pattern = 'TSUpdate',
       callback = register_haxe_parser,
     })
+
+    -- nvim-treesitter no longer ships a separate jsonc parser ("skipping
+    -- unsupported language: jsonc" on install). Highlight jsonc buffers with
+    -- the json parser instead.
+    vim.treesitter.language.register('json', { 'jsonc' })
 
     -- New nvim-treesitter API: setup() only accepts install_dir.
     -- Highlighting is handled natively by Neovim for installed parsers.

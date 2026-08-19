@@ -1,25 +1,25 @@
 local naxeforest = {
-  -- Blue-charcoal editor base. Slightly colder than Ghostty so code feels
-  -- submerged in blue undertones, while orange stays sharp and intentional.
-  bg = '#1b222b',
-  bg_dim = '#151b22',
-  bg_dark = '#11171d',
-  bg1 = '#222c37',
-  bg2 = '#2a3745',
-  bg3 = '#344456',
-  bg4 = '#405267',
-  bg5 = '#52677b',
-  fg = '#d8d5c4',
-  subtext1 = '#a2adb4',
-  subtext0 = '#81909b',
-  overlay2 = '#70808c',
-  red = '#e68183',
-  orange = '#ff9e64',
-  yellow = '#e2bd6b',
-  green = '#86c9dc',
-  blue = '#7faad6',
-  aqua = '#86c9dc',
-  purple = '#9bb8d6',
+  -- Naxecarbon: carbon (monkeytype) inspired. Near-black editor base with a
+  -- very slight violet cast; sharp orange stays the one loud color.
+  bg = '#1a1721',
+  bg_dim = '#141118',
+  bg_dark = '#100e14',
+  bg1 = '#221d2b',
+  bg2 = '#282234',
+  bg3 = '#322a40',
+  bg4 = '#3d3450',
+  bg5 = '#4d4558',
+  fg = '#f0e4cf',
+  subtext1 = '#a79db0',
+  subtext0 = '#8a8194',
+  overlay2 = '#6f6579',
+  red = '#de5d5d',
+  orange = '#f66e0d',
+  yellow = '#e8a04b',
+  green = '#9aa87c',
+  blue = '#7d87b8',
+  aqua = '#83b0ad',
+  purple = '#bfa0dd',
   none = 'NONE',
 }
 
@@ -75,10 +75,10 @@ local function apply_highlights()
   hl(0, 'DiagnosticWarn', { fg = naxeforest.orange })
   hl(0, 'DiagnosticInfo', { fg = naxeforest.blue })
   hl(0, 'DiagnosticHint', { fg = naxeforest.aqua })
-  hl(0, 'DiffAdd', { bg = '#25384a' })
+  hl(0, 'DiffAdd', { bg = '#232e22' })
   hl(0, 'DiffChange', { bg = naxeforest.bg2 })
-  hl(0, 'DiffDelete', { bg = '#443136' })
-  hl(0, 'DiffText', { bg = '#4b3526' })
+  hl(0, 'DiffDelete', { bg = '#3a2226' })
+  hl(0, 'DiffText', { bg = '#45301a' })
 
   hl(0, '@keyword', { fg = naxeforest.orange })
   hl(0, '@function', { fg = naxeforest.blue })
@@ -120,9 +120,9 @@ return {
       bg4 = color(naxeforest.bg4, '239'),
       bg5 = color(naxeforest.bg5, '240'),
       bg_visual = color(naxeforest.bg3, '238'),
-      bg_red = color('#443136', '52'),
-      bg_yellow = color('#4b3526', '136'),
-      bg_green = color('#25384a', '22'),
+      bg_red = color('#3a2226', '52'),
+      bg_yellow = color('#45301a', '136'),
+      bg_green = color('#232e22', '22'),
       bg_blue = color(naxeforest.bg2, '17'),
       bg_purple = color(naxeforest.bg2, '54'),
       fg = color(naxeforest.fg, '223'),
