@@ -12,9 +12,9 @@ return {
         },
     },
     {
-        title = 'EDITOR',
+        title = 'BUILD',
         items = {
-            { action = 'Save all + close Neovim', chord = 'SPACE Q Q', sends = '<leader>qq' },
+            { action = 'Release binary size', chord = 'SPACE M Z', sends = '<leader>mz' },
         },
     },
     {
