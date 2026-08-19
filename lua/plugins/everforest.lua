@@ -49,6 +49,8 @@ local function apply_terminal_colors()
     end
 end
 
+local function apply_wrap_marker_highlight() vim.api.nvim_set_hl(0, 'NonText', { fg = naxeforest.orange, ctermfg = 208, bold = true }) end
+
 local function apply_highlights()
     local hl = vim.api.nvim_set_hl
 
@@ -56,7 +58,7 @@ local function apply_highlights()
     hl(0, 'NormalNC', { fg = naxeforest.fg, bg = naxeforest.bg_dim })
     hl(0, 'SignColumn', { fg = naxeforest.fg, bg = naxeforest.bg })
     hl(0, 'EndOfBuffer', { fg = naxeforest.bg3, bg = naxeforest.bg })
-    hl(0, 'NonText', { fg = naxeforest.orange, ctermfg = 208, bold = true })
+    apply_wrap_marker_highlight()
     hl(0, 'IblIndent', { fg = naxeforest.overlay2, nocombine = true })
     hl(0, 'IblScope', { fg = naxeforest.subtext1, bold = true, nocombine = true })
     hl(0, 'Cursor', { fg = naxeforest.bg, bg = naxeforest.orange })
@@ -143,30 +145,29 @@ return {
         }
 
         local highlight_group = vim.api.nvim_create_augroup('naxeforest_everforest_highlights', { clear = true })
-        local function reapply_theme()
-            apply_highlights()
-            apply_terminal_colors()
-        end
-        local function schedule_reapply() vim.schedule(reapply_theme) end
+        local function schedule_wrap_marker() vim.schedule(apply_wrap_marker_highlight) end
 
         vim.api.nvim_create_autocmd('ColorScheme', {
             group = highlight_group,
             pattern = 'everforest',
-            callback = schedule_reapply,
+            callback = function()
+                apply_highlights()
+                apply_terminal_colors()
+                schedule_wrap_marker()
+            end,
         })
         vim.api.nvim_create_autocmd('User', {
             group = highlight_group,
             pattern = 'VeryLazy',
-            callback = schedule_reapply,
+            callback = schedule_wrap_marker,
         })
         vim.api.nvim_create_autocmd('VimEnter', {
             group = highlight_group,
             once = true,
-            callback = function() vim.defer_fn(reapply_theme, 100) end,
+            callback = function() vim.defer_fn(apply_wrap_marker_highlight, 100) end,
         })
 
         vim.cmd.colorscheme 'everforest'
-        apply_highlights()
         apply_terminal_colors()
     end,
 }
