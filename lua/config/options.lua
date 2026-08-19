@@ -32,7 +32,7 @@ opt.titlestring = 'nvim: %t'
 opt.wrap = true
 opt.linebreak = true
 opt.breakindent = true
-opt.breakindentopt = 'shift:2,min:40,sbr'
+opt.breakindentopt = 'shift:2,min:40'
 opt.showbreak = '↳ '
 
 -- Backups
