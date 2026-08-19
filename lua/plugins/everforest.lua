@@ -142,16 +142,23 @@ return {
             statusline3 = color(naxeforest.red, '167'),
         }
 
+        local highlight_group = vim.api.nvim_create_augroup('naxeforest_everforest_highlights', { clear = true })
         vim.api.nvim_create_autocmd('ColorScheme', {
-            group = vim.api.nvim_create_augroup('naxeforest_everforest_highlights', { clear = true }),
+            group = highlight_group,
             pattern = 'everforest',
             callback = function()
                 apply_highlights()
                 apply_terminal_colors()
             end,
         })
+        vim.api.nvim_create_autocmd('VimEnter', {
+            group = highlight_group,
+            once = true,
+            callback = apply_highlights,
+        })
 
         vim.cmd.colorscheme 'everforest'
+        apply_highlights()
         apply_terminal_colors()
     end,
 }
