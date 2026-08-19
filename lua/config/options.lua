@@ -29,6 +29,11 @@ opt.termguicolors = true
 opt.cursorline = true
 opt.title = true
 opt.titlestring = 'nvim: %t'
+opt.wrap = true
+opt.linebreak = true
+opt.breakindent = true
+opt.breakindentopt = 'shift:2,min:40,sbr'
+opt.showbreak = '↳ '
 
 -- Backups
 opt.backup = false
