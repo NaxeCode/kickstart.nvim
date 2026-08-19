@@ -143,18 +143,26 @@ return {
         }
 
         local highlight_group = vim.api.nvim_create_augroup('naxeforest_everforest_highlights', { clear = true })
+        local function reapply_theme()
+            apply_highlights()
+            apply_terminal_colors()
+        end
+        local function schedule_reapply() vim.schedule(reapply_theme) end
+
         vim.api.nvim_create_autocmd('ColorScheme', {
             group = highlight_group,
             pattern = 'everforest',
-            callback = function()
-                apply_highlights()
-                apply_terminal_colors()
-            end,
+            callback = schedule_reapply,
+        })
+        vim.api.nvim_create_autocmd('User', {
+            group = highlight_group,
+            pattern = 'VeryLazy',
+            callback = schedule_reapply,
         })
         vim.api.nvim_create_autocmd('VimEnter', {
             group = highlight_group,
             once = true,
-            callback = apply_highlights,
+            callback = function() vim.defer_fn(reapply_theme, 100) end,
         })
 
         vim.cmd.colorscheme 'everforest'
