@@ -1,35 +1,50 @@
+local function open_in_right_split(chosen_file)
+    if vim.fn.isdirectory(chosen_file) == 1 then return end
+
+    vim.cmd('botright vsplit ' .. vim.fn.fnameescape(chosen_file))
+    local width = math.min(64, math.max(44, math.floor(vim.o.columns * 0.34)))
+    vim.cmd('vertical resize ' .. width)
+    vim.wo.winfixwidth = true
+end
+
 return {
-  'mikavilpas/yazi.nvim',
-  event = 'VeryLazy',
-  dependencies = {
-    'folke/snacks.nvim',
-  },
-  keys = {
-    {
-      '<leader>-',
-      mode = { 'n', 'v' },
-      '<cmd>Yazi<cr>',
-      desc = 'Open yazi at the current file',
+    'mikavilpas/yazi.nvim',
+    event = 'VeryLazy',
+    dependencies = {
+        'folke/snacks.nvim',
     },
-    {
-      '<leader>cw',
-      '<cmd>Yazi cwd<cr>',
-      desc = "Open the file manager in nvim's working directory",
+    keys = {
+        {
+            '<leader>-',
+            mode = { 'n', 'v' },
+            '<cmd>Yazi<cr>',
+            desc = 'Open yazi at the current file',
+        },
+        {
+            '<leader>_',
+            mode = { 'n', 'v' },
+            function() require('yazi').yazi { open_file_function = open_in_right_split } end,
+            desc = 'Open yazi; select file into right split',
+        },
+        {
+            '<leader>cw',
+            '<cmd>Yazi cwd<cr>',
+            desc = "Open the file manager in nvim's working directory",
+        },
+        {
+            '<c-up>',
+            '<cmd>Yazi toggle<cr>',
+            desc = 'Resume the last yazi session',
+        },
     },
-    {
-      '<c-up>',
-      '<cmd>Yazi toggle<cr>',
-      desc = 'Resume the last yazi session',
+    opts = {
+        open_for_directories = false,
+        keymaps = {
+            show_help = '<f1>',
+        },
     },
-  },
-  opts = {
-    open_for_directories = false,
-    keymaps = {
-      show_help = '<f1>',
-    },
-  },
-  init = function()
-    vim.g.loaded_netrw = 1
-    vim.g.loaded_netrwPlugin = 1
-  end,
+    init = function()
+        vim.g.loaded_netrw = 1
+        vim.g.loaded_netrwPlugin = 1
+    end,
 }

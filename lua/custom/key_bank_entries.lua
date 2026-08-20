@@ -18,9 +18,9 @@ return {
         },
     },
     {
-        title = 'VIM MOTIONS',
+        title = 'PROJECT',
         items = {
-            { action = 'Search word; repeat matches', chord = '*  then  n / N' },
+            { action = 'Yazi → right split', chord = 'SPACE + SHIFT + -', sends = '<leader>_' },
         },
     },
 }
