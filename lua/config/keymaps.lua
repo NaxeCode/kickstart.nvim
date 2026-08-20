@@ -55,6 +55,34 @@ local function close_current_split()
     if not ok then vim.notify(('Could not close this split safely:\n%s'):format(err), vim.log.levels.WARN) end
 end
 
+local function move_vertical_divider(direction)
+    local current = vim.fn.winnr()
+    local opposite = direction == 'h' and 'l' or 'h'
+    local has_window_toward = vim.fn.winnr(direction) ~= current
+    local has_window_away = vim.fn.winnr(opposite) ~= current
+    if not has_window_toward and not has_window_away then
+        vim.notify('No vertical split divider to move.', vim.log.levels.INFO)
+        return
+    end
+
+    local delta = has_window_toward and 4 or -4
+    vim.cmd(('vertical resize %+d'):format(delta))
+end
+
+local function move_horizontal_divider(direction)
+    local current = vim.fn.winnr()
+    local opposite = direction == 'k' and 'j' or 'k'
+    local has_window_toward = vim.fn.winnr(direction) ~= current
+    local has_window_away = vim.fn.winnr(opposite) ~= current
+    if not has_window_toward and not has_window_away then
+        vim.notify('No horizontal split divider to move.', vim.log.levels.INFO)
+        return
+    end
+
+    local delta = has_window_toward and 2 or -2
+    vim.cmd(('resize %+d'):format(delta))
+end
+
 -- .NET specific keymaps
 keymap('n', '<leader>bb', '<cmd>make<cr>', { desc = 'Build project' })
 keymap('n', '<leader>rr', '<cmd>!dotnet run<cr>', { desc = 'Run project' })
@@ -73,7 +101,7 @@ keymap('n', '<C-h>', '<cmd>wincmd h<cr>', { desc = 'Focus left split' })
 keymap('n', '<C-j>', '<cmd>wincmd j<cr>', { desc = 'Focus lower split' })
 keymap('n', '<C-k>', '<cmd>wincmd k<cr>', { desc = 'Focus upper split' })
 keymap('n', '<C-l>', '<cmd>wincmd l<cr>', { desc = 'Focus right split' })
-keymap('n', '<M-h>', '<cmd>vertical resize -4<cr>', { desc = 'Make split narrower' })
-keymap('n', '<M-l>', '<cmd>vertical resize +4<cr>', { desc = 'Make split wider' })
-keymap('n', '<M-j>', '<cmd>resize -2<cr>', { desc = 'Make split shorter' })
-keymap('n', '<M-k>', '<cmd>resize +2<cr>', { desc = 'Make split taller' })
+keymap('n', '<M-h>', function() move_vertical_divider 'h' end, { desc = 'Move vertical divider left' })
+keymap('n', '<M-l>', function() move_vertical_divider 'l' end, { desc = 'Move vertical divider right' })
+keymap('n', '<M-j>', function() move_horizontal_divider 'j' end, { desc = 'Move horizontal divider down' })
+keymap('n', '<M-k>', function() move_horizontal_divider 'k' end, { desc = 'Move horizontal divider up' })
