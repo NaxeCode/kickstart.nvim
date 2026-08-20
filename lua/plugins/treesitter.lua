@@ -91,6 +91,15 @@ return {
             return
           end
 
+          -- Tree-sitter C indentation loses block depth while the file is
+          -- temporarily incomplete during editing. Vim's C indenter is stable
+          -- for partial code and handles Allman-style braces correctly.
+          if ft == 'c' then
+            vim.bo[ev.buf].indentexpr = ''
+            vim.bo[ev.buf].cindent = true
+            return
+          end
+
           -- Enable treesitter-aware indentation for buffers with reliable indent support.
           vim.bo[ev.buf].indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
         end
