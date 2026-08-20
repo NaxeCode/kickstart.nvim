@@ -10,7 +10,7 @@ return {
             { action = 'Narrower / wider', chord = 'ALT H / L', sends = '<M-h/l>' },
             { action = 'Shorter / taller', chord = 'ALT J / K', sends = '<M-j/k>' },
             { action = 'Equalize splits', chord = 'SPACE P =', sends = '<leader>p=' },
-            { action = 'Close focused / all', chord = 'SPACE Q C / Q Q', sends = '<leader>qc / qq' },
+            { action = 'Close split / save + close', chord = 'SPACE Q C / Q Q', sends = '<leader>qc / qq' },
         },
     },
 }
