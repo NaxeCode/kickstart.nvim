@@ -1,26 +1,16 @@
 -- Active bindings only. Keep at most eight entries across all sections.
 return {
     {
-        title = 'DEBUGGER · CURRENT FOCUS',
+        title = 'SPLIT WORKSPACE · CURRENT FOCUS',
         items = {
-            { action = 'Toggle breakpoint', chord = 'LOWER + V', sends = 'F9' },
-            { action = 'Start / continue', chord = 'LOWER + G', sends = 'F5' },
-            { action = 'Step over', chord = 'LOWER + B', sends = 'F10' },
-            { action = 'Terminate debugger', chord = 'LOWER + C', sends = 'F8' },
-        },
-    },
-    {
-        title = 'BUILD',
-        items = {
-            { action = 'Release binary size', chord = 'SPACE M Z', sends = '<leader>mz' },
-        },
-    },
-    {
-        title = 'PROJECT',
-        items = {
-            { action = 'Yazi bottom / right', chord = 'SPACE _ / SPACE |', sends = '<leader>_ / <leader>|' },
-            { action = 'Focus split', chord = 'CTRL + H / J / K / L', sends = '<C-h/j/k/l>' },
-            { action = 'Close focused split', chord = 'SPACE Q C', sends = '<leader>qc' },
+            { action = 'Browse with Yazi', chord = 'SPACE -', sends = '<leader>-' },
+            { action = 'Open file below', chord = 'SPACE _', sends = '<leader>_' },
+            { action = 'Open file on right', chord = 'SPACE |', sends = '<leader>|' },
+            { action = 'Focus split', chord = 'CTRL H / J / K / L', sends = '<C-h/j/k/l>' },
+            { action = 'Narrower / wider', chord = 'ALT H / L', sends = '<M-h/l>' },
+            { action = 'Shorter / taller', chord = 'ALT J / K', sends = '<M-j/k>' },
+            { action = 'Equalize splits', chord = 'SPACE P =', sends = '<leader>p=' },
+            { action = 'Close focused / all', chord = 'SPACE Q C / Q Q', sends = '<leader>qc / qq' },
         },
     },
 }
