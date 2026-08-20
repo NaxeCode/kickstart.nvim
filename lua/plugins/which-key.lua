@@ -41,6 +41,7 @@ return {
             { '<leader>d', group = '[D]ebug' },
             { '<leader>s', group = '[S]earch' },
             { '<leader>t', group = '[T]oggle' },
+            { '<leader>p', group = '[P]anels / splits' },
             { '<leader>h', group = 'Git [H]unk', mode = { 'n', 'v' } },
             { '<leader>x', group = 'E[x]ecute / Game tasks' },
             { '<leader>m', group = '[M]ake / C + raylib' },

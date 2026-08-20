@@ -7,6 +7,15 @@ local function open_in_right_split(chosen_file)
     vim.wo.winfixwidth = true
 end
 
+local function open_in_bottom_split(chosen_file)
+    if vim.fn.isdirectory(chosen_file) == 1 then return end
+
+    vim.cmd('botright split ' .. vim.fn.fnameescape(chosen_file))
+    local height = math.min(22, math.max(12, math.floor(vim.o.lines * 0.34)))
+    vim.cmd('resize ' .. height)
+    vim.wo.winfixheight = true
+end
+
 return {
     'mikavilpas/yazi.nvim',
     event = 'VeryLazy',
@@ -22,6 +31,12 @@ return {
         },
         {
             '<leader>_',
+            mode = { 'n', 'v' },
+            function() require('yazi').yazi { open_file_function = open_in_bottom_split } end,
+            desc = 'Open yazi; select file into bottom split',
+        },
+        {
+            '<leader>|',
             mode = { 'n', 'v' },
             function() require('yazi').yazi { open_file_function = open_in_right_split } end,
             desc = 'Open yazi; select file into right split',
