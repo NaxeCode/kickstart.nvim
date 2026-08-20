@@ -32,14 +32,14 @@ return {
         {
             '<leader>_',
             mode = { 'n', 'v' },
-            function() require('yazi').yazi { open_file_function = open_in_bottom_split } end,
-            desc = 'Open yazi; select file into bottom split',
+            function() require('yazi').yazi { open_file_function = open_in_right_split } end,
+            desc = 'Open yazi; select file into right split',
         },
         {
             '<leader>|',
             mode = { 'n', 'v' },
-            function() require('yazi').yazi { open_file_function = open_in_right_split } end,
-            desc = 'Open yazi; select file into right split',
+            function() require('yazi').yazi { open_file_function = open_in_bottom_split } end,
+            desc = 'Open yazi; select file into bottom split',
         },
         {
             '<leader>cw',
