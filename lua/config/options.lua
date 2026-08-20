@@ -33,7 +33,7 @@ opt.wrap = true
 opt.linebreak = true
 opt.breakindent = true
 opt.breakindentopt = 'shift:2,min:40'
-opt.showbreak = '▶ '
+opt.showbreak = '➜ '
 
 -- Backups
 opt.backup = false
