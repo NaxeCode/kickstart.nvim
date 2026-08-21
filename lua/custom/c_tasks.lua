@@ -21,12 +21,23 @@ local function has_makefile(root) return root ~= nil and vim.uv.fs_stat(root .. 
 
 -- Compiler flags shared by the fallback (no-Makefile) build commands.
 local RAYLIB_FLAGS = '$(pkg-config --cflags --libs raylib) -lm'
-local WARN_FLAGS = '-std=c99 -Wall -Wextra'
-local DEBUG_BUILD = ('cc %s -g -O0 -fsanitize=address,undefined *.c -o game %s'):format(WARN_FLAGS, RAYLIB_FLAGS)
-local RELEASE_BUILD = ('cc %s -Os -DNDEBUG -ffunction-sections -fdata-sections -Wl,--gc-sections -s *.c -o game %s'):format(WARN_FLAGS, RAYLIB_FLAGS)
+local WARN_FLAGS = '-std=c99 -Wall -Wextra -Wpedantic'
+local CLANG = 'clang -fmessage-length=0'
+local MAKE_CLANG = "make 'CC=clang -fmessage-length=0'"
+local CLANG_ERRORFORMAT = table.concat({
+    '%f:%l:%c: %t%*[^:]: %m',
+    '%f:%l: %t%*[^:]: %m',
+}, ',')
+local DEBUG_BUILD = ('%s %s -g -O0 -fsanitize=address,undefined *.c -o game %s'):format(CLANG, WARN_FLAGS, RAYLIB_FLAGS)
+local RELEASE_BUILD =
+    ('%s %s -Os -DNDEBUG -ffunction-sections -fdata-sections -Wl,--gc-sections -s *.c -o game %s'):format(
+        CLANG,
+        WARN_FLAGS,
+        RAYLIB_FLAGS
+    )
 
 local function size_report_command(root)
-    local build = has_makefile(root) and 'make release' or RELEASE_BUILD
+    local build = has_makefile(root) and (MAKE_CLANG .. ' release') or RELEASE_BUILD
     return build
         .. [[ && printf '\nFILE SIZE\n' \
 && wc -c game \
@@ -44,14 +55,31 @@ exit 2;; \
 esac; \
 printf '\nSELF-CONTAINED CHECK: raylib is included in the executable.\n']]
 end
+local function clang_tidy_command(root)
+    local flags = vim.uv.fs_stat(root .. '/compile_flags.txt') and '$(tr "\\n" " " < compile_flags.txt)' or WARN_FLAGS
+    return ('clang-tidy --quiet --extra-arg=-fmessage-length=0 *.c -- %s'):format(flags)
+end
 
 local function task_components(opts)
     opts = opts or {}
 
     local components = {
         { 'unique', replace = true },
-        { 'open_output', on_start = 'always', on_complete = 'failure', direction = 'dock', focus = opts.focus_output or false },
     }
+
+    if opts.compiler_diagnostics then
+        components[#components + 1] = {
+            'on_output_quickfix',
+            errorformat = CLANG_ERRORFORMAT,
+            items_only = true,
+            set_diagnostics = true,
+            tail = false,
+        }
+        components[#components + 1] = { 'on_result_diagnostics', remove_on_restart = true }
+    end
+
+    components[#components + 1] =
+        { 'open_output', on_start = 'always', on_complete = 'failure', direction = 'dock', focus = opts.focus_output or false }
 
     if opts.fold_raylib_startup then components[#components + 1] = 'custom.fold_raylib_startup' end
     components[#components + 1] = 'default'
@@ -96,21 +124,29 @@ local function register_templates()
     -- brand-new single-file prototype buildable before any build system exists.
     register_c_task(
         'C: build (debug)',
-        'Build the raylib project with debug symbols and sanitizers',
-        function(root) return has_makefile(root) and 'make' or DEBUG_BUILD end
+        'Build the raylib project with Clang diagnostics, debug symbols, and sanitizers',
+        function(root) return has_makefile(root) and MAKE_CLANG or DEBUG_BUILD end,
+        { compiler_diagnostics = true, normal_output = true }
     )
 
     register_c_task(
         'C: build (release)',
-        'Build the raylib project optimized for size',
-        function(root) return has_makefile(root) and 'make release' or RELEASE_BUILD end
+        'Build the raylib project with Clang diagnostics, optimized for size',
+        function(root) return has_makefile(root) and (MAKE_CLANG .. ' release') or RELEASE_BUILD end,
+        { compiler_diagnostics = true, normal_output = true }
     )
 
     register_c_task(
         'C: run (debug)',
-        'Build with debug symbols, then run the game',
-        function(root) return (has_makefile(root) and 'make' or DEBUG_BUILD) .. ' && ./game' end,
-        { fold_raylib_startup = true, normal_output = true }
+        'Build with Clang diagnostics and debug symbols, then run the game',
+        function(root) return (has_makefile(root) and MAKE_CLANG or DEBUG_BUILD) .. ' && ./game' end,
+        { compiler_diagnostics = true, fold_raylib_startup = true, normal_output = true }
+    )
+    register_c_task(
+        'C: analyze (deep)',
+        'Run slower path-sensitive correctness checks with clang-tidy',
+        clang_tidy_command,
+        { compiler_diagnostics = true, normal_output = true }
     )
 
     register_c_task('C: clean', 'Remove build artifacts', function(root) return has_makefile(root) and 'make clean' or 'rm -f game *.o' end)

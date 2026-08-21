@@ -19,6 +19,7 @@ return {
     optional = true,
     keys = {
         { '<leader>mb', run 'C: build (debug)', desc = 'C: build (debug)' },
+        { '<leader>ma', run 'C: analyze (deep)', desc = 'C: deep correctness analysis' },
         {
             '<leader>mr',
             run('C: run (debug)', { save = true, close_on_success = true }),

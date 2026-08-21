@@ -90,6 +90,14 @@ return {
                     map('grn', vim.lsp.buf.rename, '[R]e[n]ame')
                     map('gra', vim.lsp.buf.code_action, '[G]oto Code [A]ction', { 'n', 'x' })
                     map('K', vim.lsp.buf.hover, 'Hover Documentation')
+                    map('gl', function()
+                        vim.diagnostic.open_float {
+                            scope = 'line',
+                            source = 'always',
+                            focusable = true,
+                            border = 'rounded',
+                        }
+                    end, 'Line Diagnostic Details')
                     map('<C-k>', vim.lsp.buf.signature_help, 'Signature Help', { 'n', 'i' })
                     map('grr', require('telescope.builtin').lsp_references, '[G]oto [R]eferences')
                     map('gri', require('telescope.builtin').lsp_implementations, '[G]oto [I]mplementation')
