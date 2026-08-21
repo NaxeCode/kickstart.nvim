@@ -22,6 +22,31 @@ return {
         },
         config = function()
             -- Diagnostic configuration
+            local function format_wrapped_diagnostic(diagnostic)
+                local message = diagnostic.source and (diagnostic.source .. ': ' .. diagnostic.message) or diagnostic.message
+                local available_width = math.max(20, math.min(80, vim.api.nvim_win_get_width(0) - diagnostic.col - 10))
+                local lines = {}
+
+                for paragraph in message:gmatch '[^\n]+' do
+                    local line = ''
+
+                    for word in paragraph:gmatch '%S+' do
+                        local candidate = line == '' and word or (line .. ' ' .. word)
+
+                        if line ~= '' and vim.fn.strdisplaywidth(candidate) > available_width then
+                            lines[#lines + 1] = line
+                            line = word
+                        else
+                            line = candidate
+                        end
+                    end
+
+                    if line ~= '' then lines[#lines + 1] = line end
+                end
+
+                return table.concat(lines, '\n')
+            end
+
             vim.diagnostic.config {
                 severity_sort = true,
                 float = { border = 'rounded', source = 'if_many' },
@@ -34,12 +59,20 @@ return {
                         [vim.diagnostic.severity.HINT] = '󰌵 ',
                     },
                 } or {},
-                virtual_text = {
-                    source = 'if_many',
-                    spacing = 2,
-                    format = function(diagnostic) return diagnostic.message end,
+                virtual_text = false,
+                virtual_lines = {
+                    current_line = true,
+                    format = format_wrapped_diagnostic,
                 },
             }
+
+            vim.api.nvim_create_autocmd({ 'BufWinEnter', 'WinResized' }, {
+                group = vim.api.nvim_create_augroup('kickstart-diagnostic-wrap', { clear = true }),
+                callback = function()
+                    local bufnr = vim.api.nvim_get_current_buf()
+                    if vim.api.nvim_buf_is_loaded(bufnr) then vim.diagnostic.show(nil, bufnr) end
+                end,
+            })
 
             -- Set up keymaps on LspAttach
             vim.api.nvim_create_autocmd('LspAttach', {
