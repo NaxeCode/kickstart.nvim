@@ -18,6 +18,7 @@ end
 
 local root = vim.fn.tempname()
 vim.fn.mkdir(root .. '/.tutor', 'p')
+root = vim.uv.fs_realpath(root) or root
 vim.fn.mkdir(root .. '/.state', 'p')
 vim.fn.writefile({ vim.json.encode { version = 2, kcs = {}, references = {} } }, root .. '/.tutor/state.json')
 local source_path = root .. '/sample.c'

@@ -8,6 +8,7 @@ end
 
 local root = vim.fn.tempname()
 vim.fn.mkdir(root .. '/.tutor', 'p')
+root = vim.uv.fs_realpath(root) or root
 vim.fn.mkdir(root .. '/.state', 'p')
 local source_path = root .. '/fuzz.c'
 vim.fn.writefile({ 'int main(void) {', '    return 0;', '}' }, source_path)
