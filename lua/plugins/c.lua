@@ -31,5 +31,10 @@ return {
         { '<leader>mg', run 'C: generate compile_flags.txt', desc = 'C: generate compile_flags.txt' },
         { '<leader>ms', function() require('custom.c_tasks').stop() end, desc = 'C: stop running task' },
         { '<leader>md', '<cmd>OverseerToggle<cr>', desc = 'C: toggle Overseer dock' },
+        { '<leader>mt', function() require('custom.c_tutor').toggle() end, desc = 'C tutor: cycle mode' },
+        { '<leader>me', function() require('custom.c_tutor').explain_diagnostic() end, desc = 'C tutor: explain diagnostic' },
+        { '<leader>mm', function() require('custom.c_tutor').more() end, desc = 'C tutor: deeper hint' },
+        { '<leader>mu', function() require('custom.c_tutor').reroll() end, desc = 'C tutor: reroll response, bypass cache' },
+        { '<leader>mx', function() require('custom.c_tutor').dismiss() end, desc = 'C tutor: dismiss' },
     },
 }

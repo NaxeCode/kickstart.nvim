@@ -1,0 +1,19 @@
+textVerbosity: low
+
+retry:
+  enabled: true
+  maxRetries: 1
+  modelFallback: false
+
+compaction:
+  enabled: false
+
+memory:
+  backend: off
+
+autolearn:
+  enabled: false
+  autoContinue: false
+
+advisor:
+  enabled: false

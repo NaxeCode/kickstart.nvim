@@ -33,17 +33,10 @@ local function save_and_close_current()
     if not deleted then vim.notify(('Could not close this buffer safely:\n%s'):format(delete_error), vim.log.levels.WARN) end
 end
 
-local function toggle_key_bank()
-    local module_name = 'custom.key_bank'
-    local key_bank = package.loaded[module_name]
-    if key_bank and key_bank.win and vim.api.nvim_win_is_valid(key_bank.win) then
-        key_bank.close()
-        return
-    end
+local key_bank = require 'custom.key_bank'
+key_bank.setup_tracking()
 
-    package.loaded[module_name] = nil
-    require(module_name).toggle()
-end
+local function toggle_key_bank() key_bank.toggle() end
 
 local function close_current_split()
     if #vim.api.nvim_list_wins() == 1 then
