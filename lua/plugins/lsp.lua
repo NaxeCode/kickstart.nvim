@@ -60,10 +60,14 @@ return {
                     },
                 } or {},
                 virtual_text = false,
-                virtual_lines = {
-                    current_line = true,
-                    format = format_wrapped_diagnostic,
-                },
+                virtual_lines = function(_, bufnr)
+                    if vim.bo[bufnr].filetype == 'c' then return false end
+
+                    return {
+                        current_line = true,
+                        format = format_wrapped_diagnostic,
+                    }
+                end,
             }
 
             vim.api.nvim_create_autocmd({ 'BufWinEnter', 'WinResized' }, {
