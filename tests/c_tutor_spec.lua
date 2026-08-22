@@ -230,22 +230,45 @@ local valid_concept = vim.json.encode {
     concept = 'c.arrays.layout',
     title = 'Array layout',
     explanation = 'Treat each subscript as an offset from the first stored element.',
+    sections = {
+        {
+            title = 'Storage model',
+            body = 'Each subscript is an offset from the first stored element, so layout determines which address that offset selects.',
+        },
+        {
+            title = 'Boundary',
+            body = 'The valid range stops before the element count because the first element occupies offset zero.',
+        },
+    },
     question = 'Would you like to explore how two coordinates map to one offset?',
     confidence = 0.9,
 }
-check(prompt.decode(valid_concept, validation_request) ~= nil, 'concise concept help with one reasoning question is accepted')
+check(prompt.decode(valid_concept, validation_request) ~= nil, 'concept help accepts a summary with labeled detail sections')
 local concept_with_example = vim.json.decode(valid_concept)
 concept_with_example.neutral_example = 'int samples[4];'
 check(prompt.decode(vim.json.encode(concept_with_example), validation_request) == nil, 'concept help cannot collapse into worked code')
+local unstructured_concept = vim.json.decode(valid_concept)
+unstructured_concept.sections = nil
+check(prompt.decode(vim.json.encode(unstructured_concept), validation_request) == nil, 'concept help cannot collapse into one dense paragraph')
+local single_section_concept = vim.json.decode(valid_concept)
+single_section_concept.sections = { single_section_concept.sections[1] }
+check(prompt.decode(vim.json.encode(single_section_concept), validation_request) == nil, 'structured responses require enough sections to establish hierarchy')
 local detailed_concept = vim.json.decode(valid_concept)
-detailed_concept.explanation = string.rep('detail ', 180)
-check(prompt.decode(vim.json.encode(detailed_concept), validation_request) ~= nil, 'substantive concept explanations may use enough space for full context')
+detailed_concept.explanation = 'Array indexing combines a storage model with a boundary rule.'
+detailed_concept.sections[1].body = string.rep('storage ', 90)
+detailed_concept.sections[2].body = string.rep('boundary ', 90)
+check(
+    prompt.decode(vim.json.encode(detailed_concept), validation_request) ~= nil,
+    'substantive concept explanations may distribute full context across sections'
+)
 local oversized_concept = vim.json.decode(valid_concept)
-oversized_concept.explanation = string.rep('detail ', 241)
-check(prompt.decode(vim.json.encode(oversized_concept), validation_request) == nil, 'concept explanations retain a generous upper bound')
+oversized_concept.sections[1].body = string.rep('storage ', 100)
+oversized_concept.sections[2].body = string.rep('boundary ', 100)
+oversized_concept.sections[3] = { title = 'Overflow', body = string.rep('overflow ', 40) }
+check(prompt.decode(vim.json.encode(oversized_concept), validation_request) == nil, 'structured concept prose retains a generous total upper bound')
 local detailed_syntax = vim.json.decode(valid_response)
-detailed_syntax.explanation = string.rep('detail ', 100)
-check(prompt.decode(vim.json.encode(detailed_syntax), validation_request) ~= nil, 'syntax answers may include useful context beyond one sentence')
+detailed_syntax.explanation = string.rep('detail ', 70)
+check(prompt.decode(vim.json.encode(detailed_syntax), validation_request) ~= nil, 'syntax answers remain compact while retaining useful context')
 local verbose_coach = {
     version = 1,
     kind = 'hint',
@@ -277,6 +300,16 @@ local valid_reply = vim.json.encode {
     concept = 'c.follow-up.recovery',
     title = 'Recovery policy',
     explanation = 'The caller owns recovery policy because it has the operational context needed to choose retry, fallback, or escalation.',
+    sections = {
+        {
+            title = 'Decision owner',
+            body = 'The caller has the operational context needed to choose retry, fallback, or escalation.',
+        },
+        {
+            title = 'Failure visibility',
+            body = 'The selected recovery path should preserve the original failure for diagnostics and user-facing status.',
+        },
+    },
     question = 'Would you like to explore how recovery policy affects observability?',
     confidence = 0.9,
 }
@@ -317,6 +350,12 @@ for _, group in ipairs { 'CTutorTitle', 'CTutorText', 'CTutorQuestion', 'CTutorL
     equal(highlight.fg, normal_highlight.fg, group .. ' uses the high-contrast Normal foreground')
     check(highlight.bold == true and highlight.italic ~= true, group .. ' is bold and non-italic')
 end
+local section_highlight = vim.api.nvim_get_hl(0, { name = 'CTutorSection', link = false })
+equal(section_highlight.fg, 0xBFA0DD, 'section headings use a distinct violet hierarchy color')
+check(section_highlight.bold == true, 'section headings remain visually prominent')
+local detail_highlight = vim.api.nvim_get_hl(0, { name = 'CTutorDetail', link = false })
+equal(detail_highlight.fg, 0xD7CFC2, 'section details use a softer warm foreground')
+check(detail_highlight.bold ~= true and detail_highlight.italic ~= true, 'section details reduce white bold text density')
 local ai_plain = vim.api.nvim_get_hl(0, { name = 'CTutorCode', link = false })
 equal(ai_plain.fg, 0xF8F8F2, 'AI code uses a dedicated bright foreground')
 equal(ai_plain.bg, 0x241B2F, 'AI code uses a dedicated violet panel background')
@@ -496,7 +535,7 @@ check(render.exists(bufnr, first_mark_id) and render.exists(bufnr, second_mark_i
 local cache_file = tutor._test.cache_path()
 wait_for(function() return vim.uv.fs_stat(cache_file) ~= nil end, 'marker answers are written to the persistent cache')
 local cache_document = vim.json.decode(table.concat(vim.fn.readfile(cache_file), '\n'))
-equal(cache_document.version, 'tutor-responses-v8', 'cache version invalidates artificially short tutor responses')
+equal(cache_document.version, 'tutor-responses-v9', 'cache version invalidates dense unstructured tutor responses')
 equal(vim.tbl_count(cache_document.entries), 2, 'each distinct marker question has one cached answer')
 for key, entry in pairs(cache_document.entries) do
     check(#key == 64, 'cache entries use SHA-256 question keys')
@@ -574,6 +613,19 @@ local deeper_response = vim.deepcopy(deeper.response)
 local deeper_mark_id = deeper.mark_id
 check(deeper and deeper.response.kind == 'hint', 'deeper response stays a hint')
 check(deeper and deeper.response.neutral_example == nil, 'deeper response does not add a new worked example')
+local structured_groups = {}
+local section_breaks = 0
+for _, line in ipairs(virt_lines(deeper_mark_id) or {}) do
+    if #line == 1 and line[1][1] == '│' then section_breaks = section_breaks + 1 end
+    for _, chunk in ipairs(line) do
+        if chunk[1] == 'Storage' or chunk[1] == 'Termination' then structured_groups[chunk[1]] = chunk[2] end
+        if chunk[1]:find('The array owns writable character elements', 1, true) then structured_groups.body = chunk[2] end
+    end
+end
+equal(structured_groups.Storage, 'CTutorSection', 'first detail heading uses the distinct section style')
+equal(structured_groups.Termination, 'CTutorSection', 'second detail heading uses the distinct section style')
+equal(structured_groups.body, 'CTutorDetail', 'detail prose uses the softer regular-weight style')
+check(section_breaks >= 3, 'structured response inserts breathing room around detail sections')
 check(not render.exists(bufnr, second_mark_id), 'completed deeper hint atomically replaces the previous decoration')
 local deeper_line = render.position(bufnr, deeper_mark_id)
 vim.api.nvim_buf_set_lines(bufnr, 0, 0, false, { '// movement after deeper hint' })

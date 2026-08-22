@@ -57,7 +57,7 @@ if not last then error(notifications[#notifications] and notifications[#notifica
 assert(last.request.interaction == 'ask', 'live marker did not use the explicit ask interaction')
 assert(last.request.question == 'what is the syntax for a mutable C string?', 'live marker question changed before submission')
 assert(last.response.kind == 'answer' and last.response.help_kind == 'syntax', 'live syntax marker did not receive a direct syntax answer')
-assert(last.response.question == nil, 'live syntax answer unexpectedly added a retrieval question')
+assert(last.response.sections == nil, 'live syntax answer unexpectedly expanded into structured concept sections')
 assert(last.response.neutral_example ~= nil, 'live syntax answer omitted its minimal neutral example')
 assert(render.get(bufnr) and render.get(bufnr).state == 'response', 'live response did not render')
 assert(last.elapsed_seconds and last.elapsed_seconds > 0, 'live response omitted total thinking duration')

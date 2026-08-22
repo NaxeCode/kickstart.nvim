@@ -139,6 +139,16 @@ for raw_line in sys.stdin:
                 "concept": f"{language}.reasoning.reply",
                 "title": "Boot failure follow-up",
                 "explanation": "Fallback UI preserves access to recovery and diagnostics while keeping initialization failure visible to the user.",
+                "sections": [
+                    {
+                        "title": "Recovery boundary",
+                        "body": "The caller has enough operational context to choose retry, fallback, or escalation without hiding the original failure.",
+                    },
+                    {
+                        "title": "Visibility",
+                        "body": "The fallback keeps diagnostics and recovery reachable while making the degraded boot state explicit to the user.",
+                    },
+                ],
                 "question": "Would you like to explore which boot failures should remain fatal?",
                 "confidence": 0.93,
             },
@@ -182,6 +192,16 @@ for raw_line in sys.stdin:
                 "concept": "c.strings.mutable-storage",
                 "title": "Writable character storage",
                 "explanation": "A mutable C string lives in writable character storage and ends with a null byte.",
+                "sections": [
+                    {
+                        "title": "Storage",
+                        "body": "The array owns writable character elements rather than pointing at immutable literal storage.",
+                    },
+                    {
+                        "title": "Termination",
+                        "body": "One additional byte stores the null terminator that marks the logical end of the string.",
+                    },
+                ],
                 "question": "Would you like to explore how terminators affect allocation size?",
                 "confidence": 0.95,
             },

@@ -40,8 +40,9 @@ No observation and no model requests.
 ### Ask
 
 - `// tutor: <question>`, `// coach: <question>`, `// t: <question>`, and `// c: <question>` never start work during Insert mode. InsertLeave may start the stable marker after 250 ms; Normal-mode changes and save remain marker-only fallback triggers.
-- Syntax answers lead with the direct spelling or API form, then include the useful context and caveats needed to make it usable, up to 120 words, with the smallest useful neutral example when appropriate.
+- Syntax answers lead with the direct spelling or API form, then include the useful context and caveats needed to make it usable, up to 80 words, with the smallest useful neutral example when appropriate.
 - Concept and whole-file answers may use up to 240 words to explain responsibilities, flow, rationale, and failure behavior instead of compressing the response into one hint.
+- Longer concept, diagnostic, deeper, and follow-up responses use a short bold orientation plus 2 to 4 labeled detail sections. Violet headings, blank separators, and softer regular-weight detail text prevent a long answer from becoming one condensed white block.
 - Tutor output never asks retrieval, prediction, or quiz questions. It may offer one optional highest-value adjacent direction, which the learner can ignore.
 - Classification is automatic; optional `syntax:` and `concept:` prefixes resolve ambiguity.
 - `<leader>me` explains the root diagnostic at the cursor.
@@ -55,7 +56,7 @@ No observation and no model requests.
 
 - Uses the same explicit-marker contract as Ask mode. It never infers a question from an ordinary edit.
 - Entering Insert mode cancels active and queued tutor work for that buffer. Insert-mode edits only reconcile existing permanent decorations; they never schedule a model request.
-- Active work uses an orange framed tutor header with compact elapsed seconds. Completed annotations keep title, explanation, question, and learner-reply text white and bold. Generated examples carry an `AI <language>` badge and use that profile's Tree-sitter parser with a separate violet-backed neon palette; an unavailable parser or highlight query falls back to the same distinct AI panel instead of borrowing source-buffer colors.
+- Active work uses an orange framed tutor header with compact elapsed seconds. Completed annotations keep the title and short orientation bold, render section headings in violet, and render section details in a softer regular-weight foreground. Generated examples carry an `AI <language>` badge and use that profile's Tree-sitter parser with a separate violet-backed neon palette; an unavailable parser or highlight query falls back to the same distinct AI panel instead of borrowing source-buffer colors.
 - Every completed annotation has an orange provenance footer naming the exact model selector, configured thinking level or `no thinking`, and `fresh` or `cache hit`.
 - Message visibility is session-local. A hidden annotation follows its source marker and remains eligible for follow-up, reroll, and deeper requests; reopening the buffer restores the cached response visibly.
 
@@ -80,9 +81,12 @@ No observation and no model requests.
 
 ## Structured response contract
 
-Fields: `version`, `kind`, ask-only `help_kind`, `anchor_line`, `concept`, `title`, `explanation`, `question`, optional `neutral_example`, and `confidence`.
+Fields: `version`, `kind`, ask-only `help_kind`, `anchor_line`, `concept`, `title`, short `explanation`, optional structured `sections`, `question`, optional `neutral_example`, and `confidence`.
 
 `question` is retained as the wire-format field for compatibility, but its only permitted meaning is an optional next-direction offer; it must not test recall or require a response.
+
+`sections` contains 2 to 4 `{title, body}` objects for concept, diagnostic, deeper, and follow-up responses. Each body covers one idea; syntax and ambient coach responses omit sections to stay compact.
+
 
 
 Kinds: `answer`, `hint`, `misconception`, `silence`.

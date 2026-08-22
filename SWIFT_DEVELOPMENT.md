@@ -60,6 +60,8 @@ Projects opt into the tutor by keeping `.tutor/state.json` at the repository roo
 | `<leader>mx` | Cancel active work or dismiss a non-marker response |
 
 Explicit answers may be thorough when the question warrants it. Suggested next directions are optional learning offers, never quizzes; `<leader>mq` also accepts an unrelated follow-up about the same response.
+Long concept and whole-file responses render as a short orientation followed by labeled, visually separated detail sections. Syntax lookups remain compact.
+
 
 Language support is declared once in `lua/custom/tutor_languages.lua`. Each profile supplies its filetypes, extensions, Tree-sitter parser, protocol metadata, and concept namespace; tutor eligibility, prompts, rendering, autocmds, and parser installation derive from that registry.
 

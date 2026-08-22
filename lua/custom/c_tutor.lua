@@ -109,7 +109,7 @@ end
 
 local function save_state() return write_json(state_path(), { modes = state.saved.modes }, 'state_written', 'state_write_failed') end
 
-local CACHE_VERSION = 'tutor-responses-v8'
+local CACHE_VERSION = 'tutor-responses-v9'
 local CACHE_LIMIT = 256
 
 local function cache_path() return config.state_dir .. '/answers.json' end

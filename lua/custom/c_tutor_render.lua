@@ -31,6 +31,8 @@ local function define_highlights()
     vim.api.nvim_set_hl(0, 'CTutorText', vim.deepcopy(main))
     vim.api.nvim_set_hl(0, 'CTutorQuestion', vim.deepcopy(main))
     vim.api.nvim_set_hl(0, 'CTutorLearner', vim.deepcopy(main))
+    vim.api.nvim_set_hl(0, 'CTutorSection', { fg = '#BFA0DD', ctermfg = 183, bold = true, italic = false })
+    vim.api.nvim_set_hl(0, 'CTutorDetail', { fg = '#D7CFC2', ctermfg = 252, bold = false, italic = false })
     for group, highlight in pairs(AI_CODE_THEME) do
         vim.api.nvim_set_hl(0, group, vim.deepcopy(highlight))
     end
@@ -80,6 +82,14 @@ local function add_panel_text(target, first_prefix, continuation_prefix, text, h
             { line, highlight },
         }
     end
+end
+local function add_section(target, section, width)
+    target[#target + 1] = { { '│', 'CTutorAccent' } }
+    target[#target + 1] = {
+        { '│  ▸ ', 'CTutorAccent' },
+        { section.title, 'CTutorSection' },
+    }
+    add_panel_text(target, '│    ', '│    ', section.body, 'CTutorDetail', width)
 end
 
 local function split_code_lines(code)
@@ -346,6 +356,10 @@ function M.show(bufnr, anchor_line, response, elapsed_seconds, provenance, id, p
     if elapsed_seconds then lines[1][#lines[1] + 1] = { (' · %s'):format(format_elapsed(elapsed_seconds)), 'CTutorAccent' } end
     if learner_reply then add_panel_text(lines, '│  You · ', '│    ', learner_reply, 'CTutorLearner', width) end
     add_panel_text(lines, '│  ', '│  ', response.explanation, 'CTutorText', width)
+    for _, section in ipairs(response.sections or {}) do
+        add_section(lines, section, width)
+    end
+    if response.sections then lines[#lines + 1] = { { '│', 'CTutorAccent' } } end
     if response.question then add_panel_text(lines, '│  󰋗 Next · ', '│    ', response.question, 'CTutorQuestion', width) end
     lines[#lines + 1] = {
         { '│  Follow up · ', 'CTutorAccent' },
