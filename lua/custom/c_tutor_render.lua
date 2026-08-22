@@ -30,7 +30,9 @@ local function define_highlights()
     vim.api.nvim_set_hl(0, 'CTutorTitle', vim.deepcopy(main))
     vim.api.nvim_set_hl(0, 'CTutorText', vim.deepcopy(main))
     vim.api.nvim_set_hl(0, 'CTutorQuestion', vim.deepcopy(main))
-    for group, highlight in pairs(AI_CODE_THEME) do vim.api.nvim_set_hl(0, group, vim.deepcopy(highlight)) end
+    for group, highlight in pairs(AI_CODE_THEME) do
+        vim.api.nvim_set_hl(0, group, vim.deepcopy(highlight))
+    end
     vim.api.nvim_set_hl(0, 'CTutorAccent', { default = true, link = 'DiagnosticWarn' })
     vim.api.nvim_set_hl(0, 'CTutorThinking', { default = true, link = 'DiagnosticWarn' })
     vim.api.nvim_set_hl(0, 'CTutorElapsed', { default = true, link = 'DiagnosticWarn' })
@@ -94,9 +96,7 @@ local function capture_group(capture)
     if capture:match '^keyword' or capture:match '^label' then return 'CTutorCodeKeyword' end
     if capture:match '^type' or capture:match '^constructor' then return 'CTutorCodeType' end
     if capture:match '^function' or capture:match '^method' then return 'CTutorCodeFunction' end
-    if capture:match '^number' or capture:match '^float' or capture:match '^boolean' or capture:match '^constant' then
-        return 'CTutorCodeNumber'
-    end
+    if capture:match '^number' or capture:match '^float' or capture:match '^boolean' or capture:match '^constant' then return 'CTutorCodeNumber' end
     if capture:match '^operator' then return 'CTutorCodeOperator' end
     if capture:match '^punctuation' then return 'CTutorCodePunctuation' end
     if capture:match '^preproc' or capture:find('directive', 1, true) then return 'CTutorCodePreProc' end
@@ -130,8 +130,7 @@ local function ai_code_lines(code, language)
             if capture then
                 local group = capture_group(capture)
                 local capture_metadata = type(metadata) == 'table' and metadata[id] or nil
-                local configured_priority = type(capture_metadata) == 'table' and capture_metadata.priority
-                    or (type(metadata) == 'table' and metadata.priority)
+                local configured_priority = type(capture_metadata) == 'table' and capture_metadata.priority or (type(metadata) == 'table' and metadata.priority)
                 local priority = type(configured_priority) == 'number' and configured_priority or (100 + #capture)
                 local start_row, start_column, end_row, end_column = node:range()
                 for row = start_row, end_row do
@@ -144,9 +143,7 @@ local function ai_code_lines(code, language)
                         last = math.max(first, math.min(last, #line))
                         for column = first + 1, last do
                             local current = styles[line_index][column]
-                            if not current or priority >= current.priority then
-                                styles[line_index][column] = { group = group, priority = priority }
-                            end
+                            if not current or priority >= current.priority then styles[line_index][column] = { group = group, priority = priority } end
                         end
                     end
                 end
@@ -331,14 +328,13 @@ end
 local function provenance_label(provenance)
     provenance = provenance or {}
     local model = type(provenance.model) == 'string' and provenance.model ~= '' and provenance.model or 'unknown model'
-    local thinking = type(provenance.thinking_level) == 'string' and provenance.thinking_level ~= ''
-            and ('thinking ' .. provenance.thinking_level)
+    local thinking = type(provenance.thinking_level) == 'string' and provenance.thinking_level ~= '' and ('thinking ' .. provenance.thinking_level)
         or 'no thinking'
     local source = provenance.source == 'cache' and 'cache hit' or 'fresh'
     return ('╰─ 󰒓 %s · 󰔟 %s · 󰆓 %s'):format(model, thinking, source)
 end
 
-function M.show(bufnr, anchor_line, response, elapsed_seconds, provenance, id)
+function M.show(bufnr, anchor_line, response, elapsed_seconds, provenance, id, profile)
     local width = available_width(bufnr)
     local lines = {
         {
@@ -346,18 +342,17 @@ function M.show(bufnr, anchor_line, response, elapsed_seconds, provenance, id)
             { response.title, 'CTutorTitle' },
         },
     }
-    if elapsed_seconds then
-        lines[1][#lines[1] + 1] = { (' · %s'):format(format_elapsed(elapsed_seconds)), 'CTutorAccent' }
-    end
+    if elapsed_seconds then lines[1][#lines[1] + 1] = { (' · %s'):format(format_elapsed(elapsed_seconds)), 'CTutorAccent' } end
     add_panel_text(lines, '│  ', '│  ', response.explanation, 'CTutorText', width)
-    if response.question then
-        add_panel_text(lines, '│  󰋗 Question · ', '│    ', response.question, 'CTutorQuestion', width)
-    end
+    if response.question then add_panel_text(lines, '│  󰋗 Question · ', '│    ', response.question, 'CTutorQuestion', width) end
     if response.neutral_example then
-        local highlighted_lines = ai_code_lines(response.neutral_example)
+        profile = profile or { id = 'c', display = 'C', parser = 'c' }
+        local highlighted_lines = ai_code_lines(response.neutral_example, profile.parser or profile.id)
+        local first_prefix = ('│  󰌌 AI %s · '):format(profile.display)
+        local continuation_prefix = '│' .. string.rep(' ', math.max(display_width(first_prefix) - 1, 1))
         for index, chunks in ipairs(highlighted_lines) do
             local code_line = {
-                { index == 1 and '│  󰌌 AI C · ' or '│           ', 'CTutorAccent' },
+                { index == 1 and first_prefix or continuation_prefix, 'CTutorAccent' },
             }
             vim.list_extend(code_line, chunks)
             lines[#lines + 1] = code_line

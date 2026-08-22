@@ -24,7 +24,13 @@ local parsers = {
     'yaml',
 }
 
-if vim.fn.has 'macunix' == 1 then parsers[#parsers + 1] = 'swift' end
+local parser_set = {}
+for _, parser in ipairs(parsers) do
+    parser_set[parser] = true
+end
+for _, parser in ipairs(require('custom.tutor_languages').parsers()) do
+    if not parser_set[parser] then parsers[#parsers + 1] = parser end
+end
 
 local M = {}
 

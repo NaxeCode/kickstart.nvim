@@ -14,11 +14,6 @@ function M.setup()
     vim.keymap.set('n', '<leader>mg', run 'C: generate compile_flags.txt', { desc = 'C: generate compile_flags.txt' })
     vim.keymap.set('n', '<leader>ms', function() require('custom.c_tasks').stop() end, { desc = 'C: stop running task' })
     vim.keymap.set('n', '<leader>md', '<cmd>OverseerToggle<cr>', { desc = 'C: toggle Overseer dock' })
-    vim.keymap.set('n', '<leader>mt', function() require('custom.c_tutor').toggle() end, { desc = 'C tutor: cycle mode' })
-    vim.keymap.set('n', '<leader>me', function() require('custom.c_tutor').explain_diagnostic() end, { desc = 'C tutor: explain diagnostic' })
-    vim.keymap.set('n', '<leader>mm', function() require('custom.c_tutor').more() end, { desc = 'C tutor: deeper hint' })
-    vim.keymap.set('n', '<leader>mu', function() require('custom.c_tutor').reroll() end, { desc = 'C tutor: reroll response, bypass cache' })
-    vim.keymap.set('n', '<leader>mx', function() require('custom.c_tutor').dismiss() end, { desc = 'C tutor: dismiss' })
 end
 
 return M

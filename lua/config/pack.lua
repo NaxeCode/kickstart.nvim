@@ -75,6 +75,7 @@ local setup_modules = {
     'plugins.yazi',
     'plugins.overseer',
     'plugins.c',
+    'plugins.tutor',
     'plugins.codex',
     'plugins.neocord',
     'plugins.wk-sensor',

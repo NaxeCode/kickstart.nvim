@@ -2,6 +2,7 @@ local prompt_contract = require 'custom.c_tutor_prompt'
 local render = require 'custom.c_tutor_render'
 local rpc = require 'custom.c_tutor_rpc'
 local logger = require 'custom.c_tutor_log'
+local languages = require 'custom.tutor_languages'
 local schedule_namespace = vim.api.nvim_create_namespace 'c_tutor_schedule'
 
 local M = {}
@@ -37,7 +38,7 @@ local state = {
     projects = {},
 }
 
-local function notify(message, level) vim.notify(message, level or vim.log.levels.INFO, { title = 'C tutor' }) end
+local function notify(message, level) vim.notify(message, level or vim.log.levels.INFO, { title = 'Tutor' }) end
 
 local function state_path() return config.state_dir .. '/state.json' end
 local MAX_STATE_BYTES = 1024 * 1024
@@ -108,7 +109,7 @@ end
 
 local function save_state() return write_json(state_path(), { modes = state.saved.modes }, 'state_written', 'state_write_failed') end
 
-local CACHE_VERSION = 'tutor-responses-v6'
+local CACHE_VERSION = 'tutor-responses-v7'
 local CACHE_LIMIT = 256
 
 local function cache_path() return config.state_dir .. '/answers.json' end
@@ -188,9 +189,7 @@ end
 
 local function marker_cache_key(root, relative_path, question)
     local root_id = vim.fn.sha256(root or '')
-    return vim.fn.sha256(
-        table.concat({ CACHE_VERSION, cache_profile(), 'marker', root_id, relative_path or '', normalize_question(question) }, '\0')
-    )
+    return vim.fn.sha256(table.concat({ CACHE_VERSION, cache_profile(), 'marker', root_id, relative_path or '', normalize_question(question) }, '\0'))
 end
 local function marker_question_for(request)
     if type(request.marker_question) == 'string' and request.marker_question ~= '' then return request.marker_question end
@@ -279,23 +278,25 @@ end
 local function project_info(bufnr)
     if not vim.api.nvim_buf_is_valid(bufnr) or not vim.api.nvim_buf_is_loaded(bufnr) then return nil, 'invalid buffer' end
     if vim.api.nvim_get_option_value('buftype', { buf = bufnr }) ~= '' then return nil, 'special buffer' end
-    if vim.api.nvim_get_option_value('filetype', { buf = bufnr }) ~= 'c' then return nil, 'not a C buffer' end
 
     local path = vim.api.nvim_buf_get_name(bufnr)
     if path == '' then return nil, 'unnamed buffer' end
     path = vim.fs.normalize(path)
+
+    local filetype = vim.api.nvim_get_option_value('filetype', { buf = bufnr })
+    local profile, profile_error = languages.for_buffer(filetype, path)
+    if not profile then return nil, profile_error end
+
     local cached = state.projects[bufnr]
-    if cached and cached.path == path then
+    if cached and cached.path == path and cached.profile == profile then
         return {
             root = cached.root,
             relative_path = cached.relative_path,
             path = cached.path,
+            profile = cached.profile,
             mode = mode_for_root(cached.root),
         }
     end
-
-    local extension = path:match '%.([^.]+)$'
-    if extension ~= 'c' and extension ~= 'h' then return nil, 'not a C source path' end
 
     local root = vim.fs.root(path, { '.tutor' })
     if not root then return nil, 'outside a .tutor project' end
@@ -314,11 +315,13 @@ local function project_info(bufnr)
         root = root,
         relative_path = relative,
         path = path,
+        profile = profile,
     }
     return {
         root = root,
         relative_path = relative,
         path = path,
+        profile = profile,
         mode = mode_for_root(root),
     }
 end
@@ -330,7 +333,11 @@ local function refresh_buffer_mode(bufnr)
     local key = root_key(info.root)
     if state.disclosed[key] then return info end
     state.disclosed[key] = true
-    notify 'Tutor markers active: // tutor:, // coach:, // t:, and // c: send only their explicit questions. Use <leader>mt to turn the tutor off.'
+    notify(
+        ('%s tutor markers active: // tutor:, // coach:, // t:, and // c: send only their explicit questions. Use <leader>mt to turn the tutor off.'):format(
+            info.profile.display
+        )
+    )
     return info
 end
 
@@ -464,6 +471,7 @@ local function request_for(bufnr, anchor_line, interaction, question, previous)
         bufnr = bufnr,
         root = info.root,
         relative_path = info.relative_path,
+        profile = info.profile,
         anchor_line = anchor_line,
         context = context,
         context_start = context_start,
@@ -613,8 +621,15 @@ local function show_cached_answer(request, entry, existing_mark_id)
     end
     local provenance = vim.deepcopy(entry.provenance)
     provenance.source = 'cache'
-    local mark_id =
-        render.show(validation_request.bufnr, validation_request.anchor_line, decoded, entry.elapsed_seconds, provenance, existing_mark_id)
+    local mark_id = render.show(
+        validation_request.bufnr,
+        validation_request.anchor_line,
+        decoded,
+        entry.elapsed_seconds,
+        provenance,
+        existing_mark_id,
+        validation_request.profile
+    )
     if existing_mark_id and mark_id ~= existing_mark_id then remove_annotation(validation_request.bufnr, existing_mark_id) end
     annotation_bucket(validation_request.bufnr)[mark_id] = {
         request = validation_request,
@@ -728,7 +743,7 @@ local function handle_result(generation, request, mark_id, err, text, event)
     if marker_question_for(request) then response.anchor_line = request.anchor_line end
     local elapsed_seconds = (vim.uv.hrtime() - request.started_at) / 1000000000
     local provenance = response_provenance('fresh', event)
-    local rendered_id = render.show(request.bufnr, response.anchor_line, response, elapsed_seconds, provenance, mark_id)
+    local rendered_id = render.show(request.bufnr, response.anchor_line, response, elapsed_seconds, provenance, mark_id, request.profile)
     if rendered_id ~= mark_id then remove_annotation(request.bufnr, mark_id, 'extmark_recreated') end
     annotation_bucket(request.bufnr)[rendered_id] = {
         request = request,
@@ -772,11 +787,7 @@ local function start_request(request, mark_id)
         log_request('request_duplicate', request, { mark_id = mark_id })
         return false, 'duplicate tutor request'
     end
-    local cached = not request.bypass_cache
-        and request.interaction ~= 'more'
-        and request.cache_key
-        and state.cache[request.cache_key]
-        or nil
+    local cached = not request.bypass_cache and request.interaction ~= 'more' and request.cache_key and state.cache[request.cache_key] or nil
     if cached and show_cached_answer(request, cached, mark_id) then return false, 'cached tutor answer' end
 
     state.request_generation = state.request_generation + 1
@@ -829,8 +840,7 @@ function M._dispatch(request)
         log_request('request_duplicate', request, { reason = 'request_hash' })
         return false, 'duplicate tutor request'
     end
-    local cached =
-        not request.bypass_cache and request.interaction ~= 'more' and request.cache_key and state.cache[request.cache_key] or nil
+    local cached = not request.bypass_cache and request.interaction ~= 'more' and request.cache_key and state.cache[request.cache_key] or nil
     if cached and show_cached_answer(request, cached) then return true, 'cached tutor answer' end
 
     if state.active or state.client:is_busy() then
@@ -1175,8 +1185,7 @@ function M.reroll()
     end
     local anchor_line = render.position(bufnr, previous.mark_id) or previous.response.anchor_line
     local prior_request = previous.request
-    local request, err =
-        request_for(bufnr, anchor_line, prior_request.interaction, prior_request.question, prior_request.previous_response)
+    local request, err = request_for(bufnr, anchor_line, prior_request.interaction, prior_request.question, prior_request.previous_response)
     if not request then
         notify(err, vim.log.levels.WARN)
         return false
@@ -1333,7 +1342,8 @@ local function reference_command(action)
         return false
     end
     local topic = last.response.concept:lower():gsub('[^%w_.%-]', '-')
-    if not topic:match '^c%.' then topic = 'c.' .. topic end
+    local prefix = info.profile.concept_prefix
+    if not topic:match('^' .. vim.pesc(prefix) .. '%.') then topic = prefix .. '.' .. topic end
 
     local document, path, state_error = project_reference_state(info)
     if not document then
@@ -1414,10 +1424,10 @@ function M.setup(opts)
         end,
     }
 
-    local group = vim.api.nvim_create_augroup('CTutor', { clear = true })
+    local group = vim.api.nvim_create_augroup('Tutor', { clear = true })
     vim.api.nvim_create_autocmd('BufEnter', {
         group = group,
-        pattern = { '*.c', '*.h' },
+        pattern = languages.patterns,
         callback = function(event) reconcile_eligibility(event.buf) end,
     })
     vim.api.nvim_create_autocmd({ 'BufFilePost', 'FileType' }, {
@@ -1426,7 +1436,7 @@ function M.setup(opts)
     })
     vim.api.nvim_create_autocmd('InsertEnter', {
         group = group,
-        pattern = { '*.c', '*.h' },
+        pattern = languages.patterns,
         callback = function(event)
             log_editor_event(event.event, event.buf)
             cancel_buffer_work(event.buf, 'Tutor work cancelled on InsertEnter')
@@ -1434,7 +1444,7 @@ function M.setup(opts)
     })
     vim.api.nvim_create_autocmd('InsertLeave', {
         group = group,
-        pattern = { '*.c', '*.h' },
+        pattern = languages.patterns,
         callback = function(event)
             log_editor_event(event.event, event.buf)
             schedule_current_marker(event.buf, config.ask_debounce_ms, event.event)
@@ -1442,7 +1452,7 @@ function M.setup(opts)
     })
     vim.api.nvim_create_autocmd('BufWritePost', {
         group = group,
-        pattern = { '*.c', '*.h' },
+        pattern = languages.patterns,
         callback = function(event)
             log_editor_event(event.event, event.buf)
             if reconcile_eligibility(event.buf, 'Tutor project eligibility changed') then
@@ -1452,7 +1462,7 @@ function M.setup(opts)
     })
     vim.api.nvim_create_autocmd('TextChanged', {
         group = group,
-        pattern = { '*.c', '*.h' },
+        pattern = languages.patterns,
         callback = function(event)
             log_editor_event(event.event, event.buf)
             invalidate(event.buf)
@@ -1461,7 +1471,7 @@ function M.setup(opts)
     })
     vim.api.nvim_create_autocmd('TextChangedI', {
         group = group,
-        pattern = { '*.c', '*.h' },
+        pattern = languages.patterns,
         callback = function(event)
             log_editor_event(event.event, event.buf)
             invalidate(event.buf)

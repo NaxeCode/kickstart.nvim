@@ -323,6 +323,22 @@ function M.setup()
         }
     end
 
+    local formatters_by_ft = {
+        lua = { 'stylua' },
+        javascript = { 'prettier' },
+        javascriptreact = { 'prettier' },
+        typescript = { 'prettier' },
+        typescriptreact = { 'prettier' },
+        json = { 'prettier' },
+        jsonc = { 'prettier' },
+        yaml = { 'prettier' },
+        markdown = { 'prettier' },
+        html = { 'prettier' },
+        css = { 'prettier' },
+        cs = { 'csharpier' },
+    }
+    if vim.fn.has 'macunix' == 1 then formatters_by_ft.swift = { 'swiftformat' } end
+
     require('conform').setup {
         notify_on_error = false,
         format_on_save = function(bufnr)
@@ -334,21 +350,7 @@ function M.setup()
             prettier = { prepend_args = { '--tab-width', tostring(indent_width) } },
             stylua = { prepend_args = { '--indent-width', tostring(indent_width) } },
         },
-        formatters_by_ft = {
-            lua = { 'stylua' },
-            javascript = { 'prettier' },
-            javascriptreact = { 'prettier' },
-            typescript = { 'prettier' },
-            typescriptreact = { 'prettier' },
-            json = { 'prettier' },
-            jsonc = { 'prettier' },
-            yaml = { 'prettier' },
-            markdown = { 'prettier' },
-            html = { 'prettier' },
-            css = { 'prettier' },
-            swift = { 'swiftformat' },
-            cs = { 'csharpier' },
-        },
+        formatters_by_ft = formatters_by_ft,
     }
     vim.keymap.set({ 'n', 'v' }, '<leader>f', function() require('conform').format { async = true, lsp_format = 'fallback' } end, { desc = '[F]ormat buffer' })
 

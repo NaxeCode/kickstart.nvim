@@ -261,7 +261,7 @@ check(ai_plain.bold ~= true and ai_plain.italic ~= true, 'AI code remains regula
 equal(vim.api.nvim_get_hl(0, { name = 'CTutorCodeKeyword', link = false }).fg, 0xFF79C6, 'AI keywords use neon pink')
 equal(vim.api.nvim_get_hl(0, { name = 'CTutorCodeType', link = false }).fg, 0xBD93F9, 'AI types use violet')
 equal(vim.api.nvim_get_hl(0, { name = 'CTutorCodeString', link = false }).fg, 0xF1FA8C, 'AI strings use pale yellow')
-local semantic_lines, semantic_parsed = render._test.ai_code_lines('char label[] = "north";')
+local semantic_lines, semantic_parsed = render._test.ai_code_lines 'char label[] = "north";'
 check(semantic_parsed, 'AI code highlighter parses C with Tree-sitter')
 local semantic_groups = {}
 for _, chunk in ipairs(semantic_lines[1]) do
@@ -275,7 +275,7 @@ equal(semantic_groups['"north"'], 'CTutorCodeString', 'Tree-sitter capture maps 
 local fallback_lines, fallback_parsed = render._test.ai_code_lines('char fallback;', 'missing-tutor-language')
 check(not fallback_parsed, 'missing parsers select the safe AI-code fallback')
 equal(fallback_lines[1][1][2], 'CTutorCode', 'parser fallback retains the distinct AI code theme')
-local broad_lines = render._test.ai_code_lines('int total = helper(42); // note')
+local broad_lines = render._test.ai_code_lines 'int total = helper(42); // note'
 local broad_groups = {}
 for _, chunk in ipairs(broad_lines[1]) do
     broad_groups[chunk[1]] = chunk[2]
@@ -325,14 +325,20 @@ wait_for(function()
 end, 'thinking indicator advances in 00.00s format', 1000)
 render.clear(bufnr)
 check(render.get(bufnr) == nil, 'clearing thinking state stops its display timer')
-local no_thinking_id = render.show(bufnr, 2, {
-    title = 'Metadata preview',
-    explanation = 'Main tutor information remains bright and readable.',
-}, 0.1, {
-    model = 'test/plain-model',
-    thinking_level = false,
-    source = 'fresh',
-})
+local no_thinking_id = render.show(
+    bufnr,
+    2,
+    {
+        title = 'Metadata preview',
+        explanation = 'Main tutor information remains bright and readable.',
+    },
+    0.1,
+    {
+        model = 'test/plain-model',
+        thinking_level = false,
+        source = 'fresh',
+    }
+)
 check(annotation_text(no_thinking_id):find('no thinking', 1, true) ~= nil, 'provenance explicitly labels responses without thinking')
 render.clear(bufnr, no_thinking_id)
 
@@ -427,7 +433,7 @@ check(render.exists(bufnr, first_mark_id) and render.exists(bufnr, second_mark_i
 local cache_file = tutor._test.cache_path()
 wait_for(function() return vim.uv.fs_stat(cache_file) ~= nil end, 'marker answers are written to the persistent cache')
 local cache_document = vim.json.decode(table.concat(vim.fn.readfile(cache_file), '\n'))
-equal(cache_document.version, 'tutor-responses-v6', 'cache version identifies provenance-bearing model-scoped decorations')
+equal(cache_document.version, 'tutor-responses-v7', 'cache version identifies language-profiled provenance-bearing decorations')
 equal(vim.tbl_count(cache_document.entries), 2, 'each distinct marker question has one cached answer')
 for key, entry in pairs(cache_document.entries) do
     check(#key == 64, 'cache entries use SHA-256 question keys')

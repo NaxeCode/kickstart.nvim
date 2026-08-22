@@ -98,8 +98,38 @@ for raw_line in sys.stdin:
 
     anchor_line = envelope["file"]["anchor_line"]
     interaction = envelope["interaction"]
+    language = envelope["file"].get("language", "c")
     if mode == "malformed":
         tutor_text = "not-json"
+    elif language == "swift" and interaction == "coach":
+        tutor_text = json.dumps(
+            {
+                "version": 1,
+                "kind": "hint",
+                "anchor_line": anchor_line,
+                "concept": "swift.value-semantics",
+                "title": "Check ownership",
+                "explanation": "Decide whether this value should be copied or shared before choosing its type.",
+                "question": "Which owner should control mutation?",
+                "confidence": 0.9,
+            },
+            separators=(",", ":"),
+        )
+    elif language == "swift" and interaction == "ask":
+        tutor_text = json.dumps(
+            {
+                "version": 1,
+                "kind": "answer",
+                "help_kind": "syntax",
+                "anchor_line": anchor_line,
+                "concept": "swift.collections.array",
+                "title": "Array syntax",
+                "explanation": "Use var when the array binding must support mutation.",
+                "neutral_example": "var scores = [1, 2]",
+                "confidence": 0.95,
+            },
+            separators=(",", ":"),
+        )
     elif interaction == "coach":
         tutor_text = json.dumps(
             {
