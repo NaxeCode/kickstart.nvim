@@ -23,7 +23,7 @@ This repository is a highly optimized, modular fork of `kickstart.nvim` tailored
 - **NuShell:** Native integration using system binary (`nu --lsp`). Do NOT attempt to install via Mason.
   - **LSP:** Manually configured in `lua/plugins/lsp.lua` using `lspconfig` to ensure compatibility with system binary.
   - **Highlighting:** Handled by TreeSitter. Requires manual parser installation via `:TSUpdate nu`.
-- **Swift / Apple platforms:** Mac-only SourceKit-LSP from the selected Xcode toolchain, Swift TreeSitter, SwiftFormat, SwiftLint, and Aura Gainz `apple-verify` Overseer workflows under `<leader>a`. Do not install SourceKit through Mason or mutate generated Xcode projects.
+- **Swift / Apple platforms:** Mac-only SourceKit-LSP from the selected Xcode toolchain, Swift TreeSitter, SwiftFormat, SwiftLint, and Aura Gainz `apple-verify` Overseer workflows under `<leader>a`. Do not install SourceKit through Mason or mutate generated Xcode projects. See `SWIFT_DEVELOPMENT.md`.
 - **.NET/C#:** Full solution support via `roslyn.nvim` and `csharp.nvim`.
 - **Rust:** Full `rust-analyzer` integration.
 - **Node.js:** Managed by `fnm` (Fast Node Manager).
