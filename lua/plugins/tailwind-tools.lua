@@ -1,17 +1,10 @@
-return {
-  'luckasRanarison/tailwind-tools.nvim',
-  name = 'tailwind-tools',
-  event = 'BufReadPre',
-  dependencies = {
-    'nvim-treesitter/nvim-treesitter',
-    'neovim/nvim-lspconfig',
-  },
-  opts = {
-    document_color = {
-      enabled = true,
-    },
-    server = {
-      override = false, -- Disable internal setup to avoid deprecated lspconfig calls
-    },
-  },
-}
+local M = {}
+
+function M.setup()
+    require('tailwind-tools').setup {
+        document_color = { enabled = true },
+        server = { override = false },
+    }
+end
+
+return M

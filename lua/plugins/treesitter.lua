@@ -1,51 +1,47 @@
 local parsers = {
-  'bash',
-  'c',
-  'c_sharp',
-  'css',
-  'diff',
-  'dockerfile',
-  'haxe',
-  'html',
-  'javascript',
-  'json',
-  'lua',
-  'luadoc',
-  'markdown',
-  'markdown_inline',
-  'nu',
-  'odin',
-  'query',
-  'toml',
-  'tsx',
-  'typescript',
-  'vim',
-  'vimdoc',
-  'yaml',
+    'bash',
+    'c',
+    'c_sharp',
+    'css',
+    'diff',
+    'dockerfile',
+    'haxe',
+    'html',
+    'javascript',
+    'json',
+    'lua',
+    'luadoc',
+    'markdown',
+    'markdown_inline',
+    'nu',
+    'odin',
+    'query',
+    'toml',
+    'tsx',
+    'typescript',
+    'vim',
+    'vimdoc',
+    'yaml',
 }
 
-return {
-  'nvim-treesitter/nvim-treesitter',
-  build = ':TSUpdate',
-  lazy = false,
-  config = function()
-    local function register_haxe_parser()
-      -- Haxe is not bundled by nvim-treesitter yet. Register external parser
-      -- before setup/install so `.hx` files get Tree-sitter highlighting.
-      require('nvim-treesitter.parsers').haxe = {
+local M = {}
+
+function M.register_haxe_parser()
+    require('nvim-treesitter.parsers').haxe = {
         install_info = {
-          url = 'https://github.com/vantreeseba/tree-sitter-haxe',
-          branch = 'main',
-          queries = 'queries',
+            url = 'https://github.com/vantreeseba/tree-sitter-haxe',
+            branch = 'main',
+            queries = 'queries',
         },
         filetype = 'haxe',
-      }
-    end
+    }
+end
 
-    register_haxe_parser()
+function M.setup()
+    M.register_haxe_parser()
     vim.api.nvim_create_autocmd('User', {
-      pattern = 'TSUpdate',
-      callback = register_haxe_parser,
+        pattern = 'TSUpdate',
+        callback = M.register_haxe_parser,
     })
 
     -- nvim-treesitter no longer ships a separate jsonc parser ("skipping
@@ -59,51 +55,52 @@ return {
 
     -- Install any missing parsers on startup
     vim.api.nvim_create_autocmd('VimEnter', {
-      once = true,
-      callback = function()
-        local installed = require('nvim-treesitter.config').get_installed 'parsers'
-        local installed_set = {}
-        for _, p in ipairs(installed) do
-          installed_set[p] = true
-        end
-        local missing = vim.tbl_filter(function(p) return not installed_set[p] end, parsers)
-        if #missing > 0 then require('nvim-treesitter.install').install(missing, { summary = true }) end
-      end,
+        once = true,
+        callback = function()
+            local installed = require('nvim-treesitter.config').get_installed 'parsers'
+            local installed_set = {}
+            for _, p in ipairs(installed) do
+                installed_set[p] = true
+            end
+            local missing = vim.tbl_filter(function(p) return not installed_set[p] end, parsers)
+            if #missing > 0 then require('nvim-treesitter.install').install(missing, { summary = true }) end
+        end,
     })
 
     -- The new nvim-treesitter no longer sets up highlight autocmds.
     -- Explicitly start treesitter highlighting for every buffer whose
     -- filetype has an installed parser.
     vim.api.nvim_create_autocmd('FileType', {
-      callback = function(ev)
-        local ft = vim.bo[ev.buf].filetype
-        if ft == '' then return end
-        local ok, lang = pcall(vim.treesitter.language.get_lang, ft)
-        if ok and lang then
-          pcall(vim.treesitter.start, ev.buf, lang)
+        callback = function(ev)
+            local ft = vim.bo[ev.buf].filetype
+            if ft == '' then return end
+            local ok, lang = pcall(vim.treesitter.language.get_lang, ft)
+            if ok and lang then
+                pcall(vim.treesitter.start, ev.buf, lang)
 
-          -- Haxe Tree-sitter highlighting works, but its indentation support is
-          -- incomplete and makes <Enter> drop block indentation in `.hx` files.
-          -- Use Vim's built-in C-like smart indent fallback for Haxe instead.
-          if ft == 'haxe' then
-            vim.bo[ev.buf].indentexpr = ''
-            vim.bo[ev.buf].smartindent = true
-            return
-          end
+                -- Haxe Tree-sitter highlighting works, but its indentation support is
+                -- incomplete and makes <Enter> drop block indentation in `.hx` files.
+                -- Use Vim's built-in C-like smart indent fallback for Haxe instead.
+                if ft == 'haxe' then
+                    vim.bo[ev.buf].indentexpr = ''
+                    vim.bo[ev.buf].smartindent = true
+                    return
+                end
 
-          -- Tree-sitter C indentation loses block depth while the file is
-          -- temporarily incomplete during editing. Vim's C indenter is stable
-          -- for partial code and handles Allman-style braces correctly.
-          if ft == 'c' then
-            vim.bo[ev.buf].indentexpr = ''
-            vim.bo[ev.buf].cindent = true
-            return
-          end
+                -- Tree-sitter C indentation loses block depth while the file is
+                -- temporarily incomplete during editing. Vim's C indenter is stable
+                -- for partial code and handles Allman-style braces correctly.
+                if ft == 'c' then
+                    vim.bo[ev.buf].indentexpr = ''
+                    vim.bo[ev.buf].cindent = true
+                    return
+                end
 
-          -- Enable treesitter-aware indentation for buffers with reliable indent support.
-          vim.bo[ev.buf].indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
-        end
-      end,
+                -- Enable treesitter-aware indentation for buffers with reliable indent support.
+                vim.bo[ev.buf].indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+            end
+        end,
     })
-  end,
-}
+end
+
+return M

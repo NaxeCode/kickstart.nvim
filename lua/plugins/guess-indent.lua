@@ -1,8 +1,8 @@
 local indent_width = require('config.style').indent_width
+local M = {}
 
-return {
-    'NMAC427/guess-indent.nvim',
-    opts = {
+function M.setup()
+    require('guess-indent').setup {
         on_tab_options = {
             expandtab = false,
             tabstop = indent_width,
@@ -15,5 +15,7 @@ return {
             softtabstop = indent_width,
             shiftwidth = indent_width,
         },
-    },
-}
+    }
+end
+
+return M

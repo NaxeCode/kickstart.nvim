@@ -1,7 +1,7 @@
-return {
-    'folke/which-key.nvim',
-    event = 'VimEnter',
-    opts = {
+local M = {}
+
+function M.setup()
+    require('which-key').setup {
         delay = 0,
         icons = {
             mappings = vim.g.have_nerd_font,
@@ -46,5 +46,7 @@ return {
             { '<leader>x', group = 'E[x]ecute / Game tasks' },
             { '<leader>m', group = '[M]ake / C + raylib' },
         },
-    },
-}
+    }
+end
+
+return M

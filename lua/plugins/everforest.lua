@@ -104,70 +104,68 @@ local function apply_highlights()
     hl(0, '@comment', { fg = naxeforest.subtext0, italic = true })
 end
 
-return {
-    'sainnhe/everforest',
-    lazy = false,
-    priority = 1000,
-    config = function()
-        vim.o.background = 'dark'
-        vim.g.everforest_background = 'hard'
-        vim.g.everforest_better_performance = 1
-        vim.g.everforest_enable_italic = 1
-        vim.g.everforest_ui_contrast = 'high'
-        vim.g.everforest_colors_override = {
-            bg_dim = color(naxeforest.bg_dim, '233'),
-            bg0 = color(naxeforest.bg, '235'),
-            bg1 = color(naxeforest.bg1, '236'),
-            bg2 = color(naxeforest.bg2, '237'),
-            bg3 = color(naxeforest.bg3, '238'),
-            bg4 = color(naxeforest.bg4, '239'),
-            bg5 = color(naxeforest.bg5, '240'),
-            bg_visual = color(naxeforest.bg3, '238'),
-            bg_red = color('#3a2226', '52'),
-            bg_yellow = color('#45301a', '136'),
-            bg_green = color('#232e22', '22'),
-            bg_blue = color(naxeforest.bg2, '17'),
-            bg_purple = color(naxeforest.bg2, '54'),
-            fg = color(naxeforest.fg, '223'),
-            red = color(naxeforest.red, '167'),
-            orange = color(naxeforest.orange, '208'),
-            yellow = color(naxeforest.yellow, '214'),
-            green = color(naxeforest.green, '142'),
-            aqua = color(naxeforest.aqua, '108'),
-            blue = color(naxeforest.blue, '109'),
-            purple = color(naxeforest.purple, '175'),
-            grey0 = color(naxeforest.overlay2, '243'),
-            grey1 = color(naxeforest.subtext0, '245'),
-            grey2 = color(naxeforest.subtext1, '247'),
-            statusline1 = color(naxeforest.orange, '208'),
-            statusline2 = color(naxeforest.blue, '109'),
-            statusline3 = color(naxeforest.red, '167'),
-        }
+local M = {}
 
-        local highlight_group = vim.api.nvim_create_augroup('naxeforest_everforest_highlights', { clear = true })
-        local function schedule_wrap_marker() vim.schedule(apply_wrap_marker_highlight) end
+function M.setup()
+    vim.o.background = 'dark'
+    vim.g.everforest_background = 'hard'
+    vim.g.everforest_better_performance = 1
+    vim.g.everforest_enable_italic = 1
+    vim.g.everforest_ui_contrast = 'high'
+    vim.g.everforest_colors_override = {
+        bg_dim = color(naxeforest.bg_dim, '233'),
+        bg0 = color(naxeforest.bg, '235'),
+        bg1 = color(naxeforest.bg1, '236'),
+        bg2 = color(naxeforest.bg2, '237'),
+        bg3 = color(naxeforest.bg3, '238'),
+        bg4 = color(naxeforest.bg4, '239'),
+        bg5 = color(naxeforest.bg5, '240'),
+        bg_visual = color(naxeforest.bg3, '238'),
+        bg_red = color('#3a2226', '52'),
+        bg_yellow = color('#45301a', '136'),
+        bg_green = color('#232e22', '22'),
+        bg_blue = color(naxeforest.bg2, '17'),
+        bg_purple = color(naxeforest.bg2, '54'),
+        fg = color(naxeforest.fg, '223'),
+        red = color(naxeforest.red, '167'),
+        orange = color(naxeforest.orange, '208'),
+        yellow = color(naxeforest.yellow, '214'),
+        green = color(naxeforest.green, '142'),
+        aqua = color(naxeforest.aqua, '108'),
+        blue = color(naxeforest.blue, '109'),
+        purple = color(naxeforest.purple, '175'),
+        grey0 = color(naxeforest.overlay2, '243'),
+        grey1 = color(naxeforest.subtext0, '245'),
+        grey2 = color(naxeforest.subtext1, '247'),
+        statusline1 = color(naxeforest.orange, '208'),
+        statusline2 = color(naxeforest.blue, '109'),
+        statusline3 = color(naxeforest.red, '167'),
+    }
 
-        vim.api.nvim_create_autocmd('ColorScheme', {
-            group = highlight_group,
-            pattern = 'everforest',
-            callback = function()
-                apply_highlights()
-                apply_terminal_colors()
-                schedule_wrap_marker()
-            end,
-        })
-        vim.api.nvim_create_autocmd('User', {
-            group = highlight_group,
-            pattern = 'VeryLazy',
-            callback = schedule_wrap_marker,
-        })
-        vim.api.nvim_create_autocmd('VimEnter', {
-            group = highlight_group,
-            once = true,
-            callback = function() vim.defer_fn(apply_wrap_marker_highlight, 100) end,
-        })
+    local group = vim.api.nvim_create_augroup('naxeforest_everforest_highlights', { clear = true })
+    local function schedule_wrap_marker() vim.schedule(apply_wrap_marker_highlight) end
+    vim.api.nvim_create_autocmd('ColorScheme', {
+        group = group,
+        pattern = 'everforest',
+        callback = function()
+            apply_highlights()
+            apply_terminal_colors()
+            schedule_wrap_marker()
+        end,
+    })
+    vim.api.nvim_create_autocmd('UIEnter', {
+        group = group,
+        once = true,
+        callback = schedule_wrap_marker,
+    })
+    vim.api.nvim_create_autocmd('VimEnter', {
+        group = group,
+        once = true,
+        callback = function() vim.defer_fn(apply_wrap_marker_highlight, 100) end,
+    })
 
-        vim.cmd.colorscheme 'everforest'
-        apply_terminal_colors()
-    end,
-}
+    vim.cmd.colorscheme 'everforest'
+    apply_terminal_colors()
+end
+
+return M

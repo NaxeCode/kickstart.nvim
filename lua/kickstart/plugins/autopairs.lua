@@ -1,10 +1,5 @@
--- autopairs
--- https://github.com/windwp/nvim-autopairs
+local M = {}
 
----@module 'lazy'
----@type LazySpec
-return {
-  'windwp/nvim-autopairs',
-  event = 'InsertEnter',
-  opts = {},
-}
+function M.setup() require('nvim-autopairs').setup {} end
+
+return M

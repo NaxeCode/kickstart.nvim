@@ -1,36 +1,18 @@
-return {
-    {
-        'numToStr/Comment.nvim',
-        opts = {},
-        keys = {
-            { 'gcc', mode = 'n', desc = 'Comment line' },
-            { 'gc', mode = { 'n', 'x' }, desc = 'Comment selection' },
-        },
-    },
-    {
-        'NvChad/nvim-colorizer.lua',
-        event = 'BufReadPre',
-        opts = {
-            filetypes = { 'css', 'html', 'tsx', 'jsx' },
-            user_default_options = {
-                tailwind = true,
-            },
-        },
-    },
-    {
-        'lukas-reineke/indent-blankline.nvim',
-        main = 'ibl',
-        event = 'BufReadPre',
-        opts = {
-            indent = { char = '│' },
-            scope = { enabled = true, char = '┃' },
-        },
-    },
-    {
-        'echasnovski/mini.nvim',
-        config = function()
-            require('mini.ai').setup { n_lines = 500 }
-            require('mini.surround').setup()
-        end,
-    },
-}
+local M = {}
+
+function M.setup()
+    require('nvim-web-devicons').setup {}
+    require('Comment').setup {}
+    require('colorizer').setup {
+        filetypes = { 'css', 'html', 'tsx', 'jsx' },
+        user_default_options = { tailwind = true },
+    }
+    require('ibl').setup {
+        indent = { char = '│' },
+        scope = { enabled = true, char = '┃' },
+    }
+    require('mini.ai').setup { n_lines = 500 }
+    require('mini.surround').setup()
+end
+
+return M

@@ -47,11 +47,10 @@ local theme = {
 
 local function c_tutor_status() return require('custom.c_tutor').statusline() end
 
-return {
-    'nvim-lualine/lualine.nvim',
-    event = 'VimEnter',
-    dependencies = { 'nvim-tree/nvim-web-devicons' },
-    opts = {
+local M = {}
+
+function M.setup()
+    require('lualine').setup {
         options = {
             theme = theme,
             globalstatus = true,
@@ -66,5 +65,7 @@ return {
             lualine_y = { 'filetype' },
             lualine_z = { 'location' },
         },
-    },
-}
+    }
+end
+
+return M
