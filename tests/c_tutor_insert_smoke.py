@@ -163,9 +163,9 @@ with tempfile.TemporaryDirectory() as temporary:
         assert re.search(r" · \d{2}\.\d{2}s$", result["title"]) is not None
         assert result["elapsed_highlight"] == "CTutorAccent"
         assert result["provenance"]["model"] == "meta/muse-spark-1.2-contributor"
-        assert result["provenance"]["thinking_level"] == "low"
+        assert result["provenance"]["thinking_level"] == "auto"
         assert result["provenance"]["source"] == "fresh"
-        assert "thinking low" in result["footer"]
+        assert "thinking auto" in result["footer"]
         assert "fresh" in result["footer"]
         assert result["code_groups"]["char"] == "CTutorCodeType"
         assert result["code_groups"]["label"] == "CTutorCodeIdentifier"

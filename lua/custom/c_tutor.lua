@@ -11,9 +11,9 @@ local defaults = {
     model = 'meta/muse-spark-1.2-contributor',
     backend = 'omp',
     service_tier = 'none',
-    thinking_level = 'low',
+    thinking_level = 'auto',
     default_mode = 'coach',
-    request_timeout_ms = 20000,
+    request_timeout_ms = 0,
     ask_debounce_ms = 250,
     max_source_bytes = 256 * 1024,
     git_check = true,
@@ -1398,6 +1398,7 @@ function M.setup(opts)
     if state.setup then return end
     state.setup = true
     config = vim.tbl_deep_extend('force', vim.deepcopy(defaults), opts or {})
+    config.thinking_level = 'auto'
     local log_ok, log_error = logger.setup {
         path = config.log_path or (config.state_dir .. '/events.jsonl'),
         max_bytes = config.log_max_bytes,

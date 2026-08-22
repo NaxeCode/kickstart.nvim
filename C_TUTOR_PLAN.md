@@ -27,7 +27,7 @@ Provide a low-friction, learning-first C tutor inside Neovim through the officia
 
 - Install Neovim and OMP.
 - Create an official Meta Model API key on each device and expose it to OMP as `MODEL_API_KEY` or `META_API_KEY`. Keep the key in a private credential file such as `~/.omp/agent/.env`, never in this repository or shell history.
-- The committed default is `backend = 'omp'`, `model = 'meta/muse-spark-1.2-contributor'`, `service_tier = 'none'`, and `thinking_level = 'low'`.
+- The committed default is `backend = 'omp'`, `model = 'meta/muse-spark-1.2-contributor'`, `service_tier = 'none'`, and `thinking_level = 'auto'`. Tutor requests have no wall-clock deadline; they remain cancellable by the user and still fail immediately if the model process exits or the transport reports an error.
 - To use the faster Gemini route intentionally, configure `backend = 'gemini'`, `model = 'google/gemini-3.5-flash-lite'`, and `service_tier = 'priority'`; it requires `GEMINI_API_KEY` or `GOOGLE_API_KEY`.
 - `.tutor/state.json` remains the portable project record. Reference add/use operations no longer depend on `~/.omp/agent/skills/tutor/scripts/tutor.py`.
 

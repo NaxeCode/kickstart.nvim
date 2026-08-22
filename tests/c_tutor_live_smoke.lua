@@ -67,7 +67,7 @@ local duration_chunk = response_extmark[3].virt_lines[1][#response_extmark[3].vi
 assert(duration_chunk[1]:match ' · %d%d%.%d%ds$', 'live response did not retain the completed request time')
 assert(duration_chunk[2] == 'CTutorAccent', 'live completed request time lost its orange accent')
 assert(last.provenance.model == model, 'live response did not record the selected model')
-assert(last.provenance.thinking_level == 'low', 'live response did not record its thinking level')
+assert(last.provenance.thinking_level == 'auto', 'live response did not use automatic thinking effort')
 assert(last.provenance.source == 'fresh', 'live response did not identify fresh inference')
 local code_groups = {}
 local ai_badge = false

@@ -23,7 +23,7 @@ local function default_command(model, thinking_level, service_tier)
         '--model',
         model,
         '--thinking',
-        thinking_level or 'low',
+        thinking_level or 'auto',
         '--service-tier',
         service_tier or 'priority',
         '--no-tools',
@@ -57,9 +57,9 @@ function Client.new(opts)
         command = opts.command,
         cwd = opts.cwd or runtime_dir(),
         model = opts.model or 'openai-codex/gpt-5.3-codex-spark',
-        thinking_level = opts.thinking_level or 'low',
+        thinking_level = opts.thinking_level or 'auto',
         service_tier = opts.service_tier or 'priority',
-        timeout_ms = opts.timeout_ms or 20000,
+        timeout_ms = opts.timeout_ms or 0,
         on_status = opts.on_status,
         process = nil,
         process_generation = 0,
@@ -310,10 +310,12 @@ function Client:request(message, metadata, callback)
     end
     if self.ready then self:_reset_session() end
 
-    vim.defer_fn(function()
-        if not self.current or self.current.serial ~= serial then return end
-        self:_fail_and_restart 'OMP tutor request timed out'
-    end, self.timeout_ms)
+    if self.timeout_ms > 0 then
+        vim.defer_fn(function()
+            if not self.current or self.current.serial ~= serial then return end
+            self:_fail_and_restart 'OMP tutor request timed out'
+        end, self.timeout_ms)
+    end
 
     return serial
 end
@@ -409,8 +411,8 @@ function GeminiClient.new(opts)
         curl_command = opts.curl_command,
         api_key_env = opts.api_key_env,
         service_tier = opts.service_tier or 'priority',
-        thinking_level = opts.thinking_level or 'low',
-        timeout_ms = opts.timeout_ms or 20000,
+        thinking_level = opts.thinking_level or 'auto',
+        timeout_ms = opts.timeout_ms or 0,
         on_status = opts.on_status,
         state = 'stopped',
         next_id = 0,
@@ -464,8 +466,12 @@ function GeminiClient:_command(body_path, header_path)
         '@' .. body_path,
         '--dump-header',
         header_path,
+    })
+    if self.timeout_ms > 0 then vim.list_extend(command, {
         '--max-time',
         tostring(math.max(1, math.ceil(self.timeout_ms / 1000))),
+    }) end
+    vim.list_extend(command, {
         '--write-out',
         '\n%{http_code}',
     })
@@ -591,9 +597,11 @@ function GeminiClient:request(message, metadata, callback)
         vim.schedule(function() self:_finish(generation, result) end)
     end)
 
-    vim.defer_fn(function()
-        if self.current and self.current.serial == serial then self:cancel 'Gemini tutor request timed out' end
-    end, self.timeout_ms)
+    if self.timeout_ms > 0 then
+        vim.defer_fn(function()
+            if self.current and self.current.serial == serial then self:cancel 'Gemini tutor request timed out' end
+        end, self.timeout_ms)
+    end
     return serial
 end
 

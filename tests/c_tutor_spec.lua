@@ -243,7 +243,7 @@ tutor.setup {
 wait_for(function() return tutor._test.state.client_status == 'ready' end, 'eligible buffer prewarms the OMP tutor process')
 equal(
     tutor._test.cache_profile(),
-    table.concat({ 'omp', 'meta/muse-spark-1.2-contributor', 'low' }, '\0'),
+    table.concat({ 'omp', 'meta/muse-spark-1.2-contributor', 'auto' }, '\0'),
     'cache identity is scoped to the default Muse model and thinking level'
 )
 equal(vim.api.nvim_get_hl(0, { name = 'CTutorAccent', link = true }).link, 'DiagnosticWarn', 'finished tutor chrome uses the orange accent')
@@ -386,12 +386,12 @@ local first_title_chunks = virt_line_chunks(first_mark_id)
 check(first_title_chunks[#first_title_chunks][1]:match ' · %d%d%.%d%ds$', 'response header retains completed request time')
 equal(first_title_chunks[#first_title_chunks][2], 'CTutorAccent', 'completed request time uses the orange annotation accent')
 equal(first.provenance.model, 'meta/muse-spark-1.2-contributor', 'fresh response records the default Muse model')
-equal(first.provenance.thinking_level, 'low', 'fresh response records its thinking level')
+equal(first.provenance.thinking_level, 'auto', 'fresh response records automatic thinking effort')
 equal(first.provenance.source, 'fresh', 'fresh response provenance identifies a model result')
 local first_text = annotation_text(first_mark_id)
 check(first_text:find('╭─ 󰚩 Tutor · ', 1, true) ~= nil, 'finished annotation uses the tutor glyph and framed header')
 check(first_text:find('󰒓 meta/muse-spark-1.2-contributor', 1, true) ~= nil, 'finished annotation shows the default Muse selector')
-check(first_text:find('󰔟 thinking low', 1, true) ~= nil, 'finished annotation shows configured thinking')
+check(first_text:find('󰔟 thinking auto', 1, true) ~= nil, 'finished annotation shows automatic thinking effort')
 check(first_text:find('󰆓 fresh', 1, true) ~= nil, 'finished annotation shows a fresh-source tag')
 local rendered_code_groups = {}
 for _, line in ipairs(virt_lines(first_mark_id) or {}) do
@@ -438,7 +438,7 @@ equal(vim.tbl_count(cache_document.entries), 2, 'each distinct marker question h
 for key, entry in pairs(cache_document.entries) do
     check(#key == 64, 'cache entries use SHA-256 question keys')
     equal(entry.provenance.model, 'meta/muse-spark-1.2-contributor', 'cache entry retains the generating Muse model')
-    equal(entry.provenance.thinking_level, 'low', 'cache entry retains the generating thinking level')
+    equal(entry.provenance.thinking_level, 'auto', 'cache entry retains automatic thinking effort')
 end
 
 vim.api.nvim_win_set_cursor(0, { render.position(bufnr, second_mark_id), 0 })
@@ -683,6 +683,19 @@ check(timeout_client:request(envelope, {}, function(err) timeout_error = err end
 wait_for(function() return timeout_error ~= nil end, 'hung RPC request times out', 2000)
 check(timeout_error and timeout_error:find 'timed out', 'timeout error is actionable')
 equal(timeout_client:status(), 'stopped', 'timeout terminates the hung process')
+
+local unlimited_error
+local unlimited_client = rpc.new {
+    command = { 'python3', fake_omp, '--mode', 'hang' },
+    cwd = root,
+    timeout_ms = 0,
+}
+check(unlimited_client:request(envelope, {}, function(err) unlimited_error = err end) ~= nil, 'deadline-free request starts')
+vim.wait(250, function() return false end, 10)
+check(unlimited_error == nil, 'deadline-free request is not cancelled while the model is still thinking')
+check(unlimited_client:is_busy(), 'deadline-free request remains active while the model is still thinking')
+unlimited_client:cancel 'test cleanup'
+unlimited_client:stop()
 
 local crash_error
 local crash_client = rpc.new {
