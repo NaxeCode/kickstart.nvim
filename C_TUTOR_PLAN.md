@@ -17,9 +17,9 @@ Provide a low-friction, learning-first C tutor inside Neovim through the officia
 
 ## Architecture
 
-1. A C-only Neovim module observes supported explicit question markers and invoked diagnostic commands.
-2. A privacy/context gate sends the complete numbered active C buffer, strips absolute paths, rejects secret-bearing text anywhere in that buffer, and records the buffer `changedtick`.
-3. The default transport keeps one restricted `omp --mode rpc` process warm, selects official `meta/muse-spark-1.2-contributor` at low thinking, and omits an OpenAI service tier. Tools, sessions, extensions, rules, skills, LSP, memory, advisor, compaction, and model fallback stay disabled. Direct Gemini Flash-Lite remains an explicit low-latency alternative rather than the default.
+1. A language-profiled Neovim module observes supported explicit question markers and invoked diagnostic commands.
+2. A privacy/context gate sends the complete numbered active buffer, strips absolute paths, rejects secret-bearing text anywhere in that buffer, and records the buffer `changedtick`.
+3. The default transport keeps one restricted `omp --mode rpc` process warm, selects official `meta/muse-spark-1.2-contributor` with automatic thinking effort, and omits an OpenAI service tier. Tools, sessions, extensions, rules, skills, LSP, memory, advisor, compaction, and model fallback stay disabled. Direct Gemini Flash-Lite remains an explicit low-latency alternative rather than the default.
 4. The client runs one model request at a time and keeps additional explicit requests in a FIFO queue. Every pending request has an invisible extmark anchor, so moving or deleting its marker updates the pending state before model work starts. Structured JSON is validated before rendering.
 5. Each completed marker response has its own extmark, follows its comment as lines move, survives unrelated edits and buffer reloads, and is permanent while the exact marker remains. A deeper hint leaves the current decoration visible until its replacement is ready, then becomes the persisted decoration. Removing or changing the marker removes the decoration; tutor mode off clears all decorations. Tutor text never enters the buffer.
 
@@ -44,21 +44,21 @@ No observation and no model requests.
 - Concept reasoning receives one decision axis or reasoning step in at most 24 words and one targeted question of at most 14 words, with no list or worked code.
 - Classification is automatic; optional `syntax:` and `concept:` prefixes resolve ambiguity.
 - `<leader>me` explains the root diagnostic at the cursor.
+- When a tutor response asks a question, the annotation displays `<leader>mq`. That mapping opens a private editor prompt, submits the learner's answer with the preceding tutor response and current file context, then atomically replaces the question with concise feedback. A useful follow-up question can continue the same loop.
 - `<leader>mm` requests one deeper explanation or hint; the successful result atomically replaces and persists as that marker's permanent decoration.
 - `<leader>mu` / `:CTutorReroll` bypasses the selected response's cache entry. The existing decoration remains visible while the fresh request runs; success atomically replaces both the decoration and persisted cache entry.
 - `<leader>mx` cancels active work or dismisses non-marker responses. Completed marker decorations require removing their `// tutor:`, `// coach:`, `// t:`, or `// c:` marker.
 
-### Coach — default enabled mode in `.tutor` C projects
+### Coach — default enabled mode in `.tutor` projects
 
 - Uses the same explicit-marker contract as Ask mode. It never infers a question from an ordinary edit.
 - Entering Insert mode cancels active and queued tutor work for that buffer. Insert-mode edits only reconcile existing permanent decorations; they never schedule a model request.
-- Unrelated Normal-mode edits do not cancel a marker request or remove completed marker responses.
-- Active work uses an orange framed tutor header with compact elapsed seconds. Completed annotations keep title, explanation, and question text white and bold. Generated C examples carry an `AI C` badge and use Tree-sitter semantic captures with a separate violet-backed neon palette; if the C parser or highlight query is unavailable, they fall back to the same distinct AI panel instead of borrowing source-buffer colors.
+- Active work uses an orange framed tutor header with compact elapsed seconds. Completed annotations keep title, explanation, question, and learner-reply text white and bold. Generated examples carry an `AI <language>` badge and use that profile's Tree-sitter parser with a separate violet-backed neon palette; an unavailable parser or highlight query falls back to the same distinct AI panel instead of borrowing source-buffer colors.
 - Every completed annotation has an orange provenance footer naming the exact model selector, configured thinking level or `no thinking`, and `fresh` or `cache hit`.
 
 ## Privacy and rate policy
 
-- Eligible filetypes: `c` and `h`.
+- Eligible languages, filetypes, extensions, and parsers come from `lua/custom/tutor_languages.lua`; C and Swift are currently registered.
 - Eligible roots must contain `.tutor/`.
 - Exclude special buffers, hidden/credential files, ignored files, and source containing secret-like material.
 - Send the project-relative path, the complete numbered active-buffer source, one relevant diagnostic, and minimal build metadata. No other project files are read automatically.
@@ -66,6 +66,7 @@ No observation and no model requests.
 - One request is in flight. Additional explicit marker requests wait in FIFO order; deleting a pending marker removes only that pending request.
 - Explicit markers debounce for 250 ms after InsertLeave, Normal-mode changes, or save.
 - Validated marker decorations, including the latest deeper hint, are cached by a SHA-256 key scoped to backend, exact model selector, thinking level, tutor root, project-relative file, and normalized question in `<stdpath('state')>/c-tutor/answers.json`. Switching models cannot silently reuse another model's answer. `<leader>me` diagnostic explanations use the same generation profile plus a fingerprint covering the project-relative file, diagnostic fields, anchor, and complete active-buffer context.
+- Learner replies and reply feedback are session-only. They participate in the in-memory request queue and privacy checks but are never written to the persistent response cache or lifecycle log as raw text.
 - The shared response cache is mode `0600`, capped at 256 entries, and restores the exact structured response, original elapsed time, generating model, thinking level, backend metadata, and generation timestamp without another model request. Cache keys persist only hashes: no source slice, raw marker question, diagnostic payload, prompt, provider credential, or model session is stored. Direct request bodies are temporary `0600` files inside the private tutor runtime directory and are unlinked after completion or cancellation. Cached tutor response text and provenance are persistent model content; structured lifecycle diagnostics contain only relative files, line numbers, editor events, queue/cache outcomes, model selectors, thinking levels, and truncated question hashes.
 
 ## Lifecycle diagnostics

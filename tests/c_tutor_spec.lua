@@ -181,6 +181,25 @@ equal(tutor._test.marker_question '// C: how do structs work?', 'how do structs 
 check(tutor._test.marker_question '// ordinary comment' == nil, 'ordinary comments are ignored')
 check(tutor._test.marker_question '// mentor: question' == nil, 'unrecognized comment labels are ignored')
 
+local reply_envelope = vim.json.decode(prompt.build {
+    interaction = 'reply',
+    relative_path = 'sample.c',
+    anchor_line = 4,
+    context_start = 2,
+    context_end = 8,
+    context = '4:int count = 4;',
+    question = 'Because the caller can recover.',
+    learner_reply = 'Because the caller can recover.',
+    previous_response = {
+        kind = 'hint',
+        question = 'Why return an error?',
+    },
+})
+equal(reply_envelope.interaction, 'reply', 'reply prompt uses an explicit interaction contract')
+equal(reply_envelope.learner_reply, 'Because the caller can recover.', 'reply prompt identifies learner text separately from tutor questions')
+check(reply_envelope.question == nil, 'reply prompt does not mislabel the learner answer as a new question')
+equal(reply_envelope.previous_response.question, 'Why return an error?', 'reply prompt carries the preceding tutor question')
+
 local validation_request = { interaction = 'ask', context_start = 2, context_end = 8 }
 local valid_response = vim.json.encode {
     version = 1,
@@ -224,6 +243,23 @@ local invalid_coach = vim.json.encode {
     confidence = 0.9,
 }
 check(prompt.decode(invalid_coach, { interaction = 'coach', context_start = 2, context_end = 8 }) == nil, 'coach answers and examples fail closed')
+local valid_reply = vim.json.encode {
+    version = 1,
+    kind = 'answer',
+    anchor_line = 4,
+    concept = 'c.reasoning.reply',
+    title = 'Reasoning check',
+    explanation = 'Yes. Returning the error lets the caller choose the recovery policy.',
+    question = 'Which errors should remain fatal?',
+    confidence = 0.9,
+}
+local reply_validation_request = { interaction = 'reply', context_start = 2, context_end = 8 }
+check(prompt.decode(valid_reply, reply_validation_request) ~= nil, 'reply feedback accepts a concise evaluation and optional next question')
+local reply_with_example = vim.json.decode(valid_reply)
+reply_with_example.neutral_example = 'return false;'
+check(prompt.decode(vim.json.encode(reply_with_example), reply_validation_request) == nil, 'reply feedback cannot become project-ready code')
+local silent_reply = vim.json.encode { version = 1, kind = 'silence', confidence = 1 }
+check(prompt.decode(silent_reply, reply_validation_request) == nil, 'reply feedback cannot silently discard the learner answer')
 check(prompt.decode('```json\n{}\n```', validation_request) == nil, 'Markdown-wrapped output fails closed')
 
 vim.cmd('edit ' .. vim.fn.fnameescape(source_path))
@@ -249,7 +285,7 @@ equal(
 equal(vim.api.nvim_get_hl(0, { name = 'CTutorAccent', link = true }).link, 'DiagnosticWarn', 'finished tutor chrome uses the orange accent')
 equal(vim.api.nvim_get_hl(0, { name = 'CTutorElapsed', link = true }).link, 'DiagnosticWarn', 'elapsed duration keeps the orange accent')
 local normal_highlight = vim.api.nvim_get_hl(0, { name = 'Normal', link = false })
-for _, group in ipairs { 'CTutorTitle', 'CTutorText', 'CTutorQuestion' } do
+for _, group in ipairs { 'CTutorTitle', 'CTutorText', 'CTutorQuestion', 'CTutorLearner' } do
     local highlight = vim.api.nvim_get_hl(0, { name = group, link = false })
     equal(highlight.fg, normal_highlight.fg, group .. ' uses the high-contrast Normal foreground')
     check(highlight.bold == true and highlight.italic ~= true, group .. ' is bold and non-italic')
@@ -525,9 +561,38 @@ local deeper_cache = tutor._test.state.cache[deeper.request.cache_key]
 equal(deeper_cache and deeper_cache.response, deeper_response, 'deeper decoration replaces the persisted marker cache entry')
 equal(deeper_cache and deeper_cache.interaction, 'more', 'persisted marker cache retains deeper-hint validation semantics')
 local permanent_mark_id = render.exists(bufnr, deeper_mark_id) and deeper_mark_id or tutor._test.state.last_response[bufnr].mark_id
+local cache_count_before_reply = vim.tbl_count(tutor._test.state.cache)
 vim.api.nvim_win_set_cursor(0, { render.position(bufnr, permanent_mark_id), 0 })
-check(not tutor.dismiss(), 'completed deeper decoration remains until its marker is removed')
-check(render.exists(bufnr, permanent_mark_id), 'dismiss attempt cannot remove a permanent deeper decoration')
+local learner_reply = 'One byte beyond the visible characters.'
+local input_prompt
+local original_input = vim.ui.input
+vim.ui.input = function(options, callback)
+    input_prompt = options.prompt
+    callback(learner_reply)
+end
+local reply_started = tutor.reply()
+vim.ui.input = original_input
+check(reply_started, 'answer mapping opens an explicit learner reply request')
+equal(input_prompt, 'Tutor answer: ', 'answer mapping opens a focused editor prompt')
+check(render.exists(bufnr, permanent_mark_id), 'question remains visible while reply feedback is generated')
+wait_for(function()
+    local last = tutor._test.state.last_response[bufnr]
+    return last and last.request.interaction == 'reply'
+end, 'reply feedback replaces the selected tutor question')
+local reply = tutor._test.state.last_response[bufnr]
+local conversation_response = vim.deepcopy(reply.response)
+equal(reply.request.learner_reply, learner_reply, 'reply request keeps learner text in its dedicated field')
+equal(reply.request.previous_response, deeper_response, 'reply request carries the exact preceding tutor response')
+check(reply.request.cache_key == nil, 'learner replies remain session-only and never enter the persistent answer cache')
+equal(vim.tbl_count(tutor._test.state.cache), cache_count_before_reply, 'reply feedback does not alter persistent marker cache entries')
+check(not render.exists(bufnr, permanent_mark_id), 'completed reply feedback atomically replaces the preceding question')
+check(annotation_text(reply.mark_id):find('You · ' .. learner_reply, 1, true) ~= nil, 'reply feedback shows the learner answer')
+check(annotation_text(reply.mark_id):find('Answer · <leader>mq', 1, true) ~= nil, 'follow-up question visibly advertises its answer mapping')
+equal(vim.fn.exists ':CTutorReply', 2, 'reply workflow is exposed as a user command')
+permanent_mark_id = reply.mark_id
+vim.api.nvim_win_set_cursor(0, { render.position(bufnr, permanent_mark_id), 0 })
+check(not tutor.dismiss(), 'completed conversational decoration remains until its marker is removed')
+check(render.exists(bufnr, permanent_mark_id), 'dismiss attempt cannot remove a permanent conversational decoration')
 if not render.exists(bufnr, permanent_mark_id) then
     tutor._test.restore_cached_annotations(bufnr)
     permanent_mark_id = tutor._test.state.last_response[bufnr].mark_id
@@ -626,7 +691,7 @@ equal(render_count(), 1, 'deleting one marker leaves the other marker response v
 vim.api.nvim_buf_set_lines(bufnr, 0, 1, false, { '// another unrelated edit' })
 tutor._test.invalidate(bufnr)
 check(render.exists(bufnr, second_mark_id), 'marker response survives later unrelated edits')
-equal(tutor._test.state.annotations[bufnr][second_mark_id].response, deeper_response, 'surviving marker keeps its permanent deeper wording')
+equal(tutor._test.state.annotations[bufnr][second_mark_id].response, conversation_response, 'surviving marker keeps its latest conversational feedback')
 
 vim.api.nvim_buf_set_lines(bufnr, 2, 3, false, { '    // tutor: slow question?' })
 tutor._test.invalidate(bufnr)

@@ -198,6 +198,7 @@ local function marker_question_for(request)
 end
 
 local function cache_key_for(request)
+    if request.interaction == 'reply' then return nil end
     local marker_question = marker_question_for(request)
     if marker_question then return marker_cache_key(request.root, request.relative_path, marker_question) end
     if request.interaction ~= 'diagnostic' then return nil end
@@ -687,6 +688,7 @@ local function refresh_pending_request(request, mark_id)
     local refreshed = request_for(request.bufnr, line_number, request.interaction, request.question, request.previous_response)
     if not refreshed then return nil end
     refreshed.marker_question = marker_question
+    refreshed.learner_reply = request.learner_reply
     refreshed.replace_mark_id = request.replace_mark_id
     refreshed.bypass_cache = request.bypass_cache
     refreshed.reroll = request.reroll
@@ -743,7 +745,7 @@ local function handle_result(generation, request, mark_id, err, text, event)
     if marker_question_for(request) then response.anchor_line = request.anchor_line end
     local elapsed_seconds = (vim.uv.hrtime() - request.started_at) / 1000000000
     local provenance = response_provenance('fresh', event)
-    local rendered_id = render.show(request.bufnr, response.anchor_line, response, elapsed_seconds, provenance, mark_id, request.profile)
+    local rendered_id = render.show(request.bufnr, response.anchor_line, response, elapsed_seconds, provenance, mark_id, request.profile, request.learner_reply)
     if rendered_id ~= mark_id then remove_annotation(request.bufnr, mark_id, 'extmark_recreated') end
     annotation_bucket(request.bufnr)[rendered_id] = {
         request = request,
@@ -1158,9 +1160,55 @@ function M.explain_diagnostic()
     return M._dispatch(request)
 end
 
+local function selected_response(bufnr) return response_at_line(bufnr, vim.api.nvim_win_get_cursor(0)[1]) or state.last_response[bufnr] end
+
+local function submit_reply(previous, answer)
+    if type(answer) ~= 'string' then return false end
+    answer = vim.trim(answer)
+    if answer == '' then
+        notify('Tutor reply was empty', vim.log.levels.INFO)
+        return false
+    end
+    if #answer > 2048 then
+        notify('Tutor reply exceeds 2 KiB', vim.log.levels.WARN)
+        return false
+    end
+
+    local bufnr = vim.api.nvim_get_current_buf()
+    local anchor_line = render.position(bufnr, previous.mark_id) or previous.response.anchor_line
+    local request, err = request_for(bufnr, anchor_line, 'reply', answer, previous.response)
+    if not request then
+        notify(err, vim.log.levels.WARN)
+        return false
+    end
+    request.learner_reply = answer
+    request.marker_question = marker_question_for(previous.request)
+    request.replace_mark_id = previous.mark_id
+    return M._dispatch(request)
+end
+
+function M.reply(answer)
+    local bufnr = vim.api.nvim_get_current_buf()
+    local previous = selected_response(bufnr)
+    if not previous then
+        notify('No tutor response is available to answer', vim.log.levels.INFO)
+        return false
+    end
+    if type(previous.response.question) ~= 'string' or previous.response.question == '' then
+        notify('This tutor response did not ask a question', vim.log.levels.INFO)
+        return false
+    end
+    if answer ~= nil then return submit_reply(previous, answer) end
+
+    vim.ui.input({ prompt = 'Tutor answer: ' }, function(value)
+        if value ~= nil then submit_reply(previous, value) end
+    end)
+    return true
+end
+
 function M.more()
     local bufnr = vim.api.nvim_get_current_buf()
-    local previous = response_at_line(bufnr, vim.api.nvim_win_get_cursor(0)[1]) or state.last_response[bufnr]
+    local previous = selected_response(bufnr)
     if not previous then
         notify('No tutor response is available to deepen', vim.log.levels.INFO)
         return false
@@ -1178,7 +1226,7 @@ end
 
 function M.reroll()
     local bufnr = vim.api.nvim_get_current_buf()
-    local previous = response_at_line(bufnr, vim.api.nvim_win_get_cursor(0)[1]) or state.last_response[bufnr]
+    local previous = selected_response(bufnr)
     if not previous then
         notify('No tutor response is available to reroll', vim.log.levels.INFO)
         return false
@@ -1191,6 +1239,7 @@ function M.reroll()
         return false
     end
     request.marker_question = marker_question_for(prior_request)
+    request.learner_reply = prior_request.learner_reply
     request.replace_mark_id = previous.mark_id
     request.bypass_cache = true
     request.reroll = true
@@ -1499,6 +1548,7 @@ function M.setup(opts)
 
     vim.api.nvim_create_user_command('CTutorAsk', M.ask_current, {})
     vim.api.nvim_create_user_command('CTutorExplain', M.explain_diagnostic, {})
+    vim.api.nvim_create_user_command('CTutorReply', function(command) M.reply(command.args ~= '' and command.args or nil) end, { nargs = '*' })
     vim.api.nvim_create_user_command('CTutorMore', M.more, {})
     vim.api.nvim_create_user_command('CTutorReroll', M.reroll, {})
     vim.api.nvim_create_user_command('CTutorDismiss', M.dismiss, {})

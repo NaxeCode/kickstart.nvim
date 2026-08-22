@@ -30,6 +30,7 @@ local function define_highlights()
     vim.api.nvim_set_hl(0, 'CTutorTitle', vim.deepcopy(main))
     vim.api.nvim_set_hl(0, 'CTutorText', vim.deepcopy(main))
     vim.api.nvim_set_hl(0, 'CTutorQuestion', vim.deepcopy(main))
+    vim.api.nvim_set_hl(0, 'CTutorLearner', vim.deepcopy(main))
     for group, highlight in pairs(AI_CODE_THEME) do
         vim.api.nvim_set_hl(0, group, vim.deepcopy(highlight))
     end
@@ -334,7 +335,7 @@ local function provenance_label(provenance)
     return ('╰─ 󰒓 %s · 󰔟 %s · 󰆓 %s'):format(model, thinking, source)
 end
 
-function M.show(bufnr, anchor_line, response, elapsed_seconds, provenance, id, profile)
+function M.show(bufnr, anchor_line, response, elapsed_seconds, provenance, id, profile, learner_reply)
     local width = available_width(bufnr)
     local lines = {
         {
@@ -343,8 +344,15 @@ function M.show(bufnr, anchor_line, response, elapsed_seconds, provenance, id, p
         },
     }
     if elapsed_seconds then lines[1][#lines[1] + 1] = { (' · %s'):format(format_elapsed(elapsed_seconds)), 'CTutorAccent' } end
+    if learner_reply then add_panel_text(lines, '│  You · ', '│    ', learner_reply, 'CTutorLearner', width) end
     add_panel_text(lines, '│  ', '│  ', response.explanation, 'CTutorText', width)
-    if response.question then add_panel_text(lines, '│  󰋗 Question · ', '│    ', response.question, 'CTutorQuestion', width) end
+    if response.question then
+        add_panel_text(lines, '│  󰋗 Question · ', '│    ', response.question, 'CTutorQuestion', width)
+        lines[#lines + 1] = {
+            { '│  Answer · ', 'CTutorAccent' },
+            { '<leader>mq', 'CTutorQuestion' },
+        }
+    end
     if response.neutral_example then
         profile = profile or { id = 'c', display = 'C', parser = 'c' }
         local highlighted_lines = ai_code_lines(response.neutral_example, profile.parser or profile.id)
@@ -392,6 +400,7 @@ function M.show(bufnr, anchor_line, response, elapsed_seconds, provenance, id, p
         response = response,
         elapsed_seconds = elapsed_seconds,
         provenance = provenance,
+        learner_reply = learner_reply,
         order = next_order(),
     }
     latest[bufnr] = id

@@ -130,6 +130,20 @@ for raw_line in sys.stdin:
             },
             separators=(",", ":"),
         )
+    elif interaction == "reply":
+        tutor_text = json.dumps(
+            {
+                "version": 1,
+                "kind": "answer",
+                "anchor_line": anchor_line,
+                "concept": f"{language}.reasoning.reply",
+                "title": "Reasoning check",
+                "explanation": "Yes. That keeps initialization failure visible while preserving a recoverable interface.",
+                "question": "Which failures should remain unrecoverable?",
+                "confidence": 0.93,
+            },
+            separators=(",", ":"),
+        )
     elif interaction == "coach":
         tutor_text = json.dumps(
             {

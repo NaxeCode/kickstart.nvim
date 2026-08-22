@@ -53,9 +53,10 @@ Projects opt into the tutor by keeping `.tutor/state.json` at the repository roo
 | --- | --- |
 | `<leader>mt` | Toggle tutor coaching |
 | `<leader>me` | Explain the current diagnostic |
-| `<leader>mm` | Show the current mastery map |
-| `<leader>mu` | Undo the latest mastery update |
-| `<leader>mx` | Clear tutor state for the current buffer |
+| `<leader>mq` | Answer the question in the selected or latest tutor response |
+| `<leader>mm` | Request one deeper explanation or hint |
+| `<leader>mu` | Reroll the response without using its cache entry |
+| `<leader>mx` | Cancel active work or dismiss a non-marker response |
 
 Language support is declared once in `lua/custom/tutor_languages.lua`. Each profile supplies its filetypes, extensions, Tree-sitter parser, protocol metadata, and concept namespace; tutor eligibility, prompts, rendering, autocmds, and parser installation derive from that registry.
 
