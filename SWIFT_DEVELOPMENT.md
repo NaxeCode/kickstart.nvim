@@ -45,6 +45,20 @@ Apple mappings use the `<leader>a` group:
 
 Every verification mapping saves modified buffers before starting. If a save fails or the current buffer is outside Aura Gainz, no task starts and Neovim reports an actionable error.
 
+## Tutor
+
+Projects opt into the tutor by keeping `.tutor/state.json` at the repository root. Swift buffers then use the shared tutor mappings:
+
+| Mapping | Action |
+| --- | --- |
+| `<leader>mt` | Toggle tutor coaching |
+| `<leader>me` | Explain the current diagnostic |
+| `<leader>mm` | Show the current mastery map |
+| `<leader>mu` | Undo the latest mastery update |
+| `<leader>mx` | Clear tutor state for the current buffer |
+
+Language support is declared once in `lua/custom/tutor_languages.lua`. Each profile supplies its filetypes, extensions, Tree-sitter parser, protocol metadata, and concept namespace; tutor eligibility, prompts, rendering, autocmds, and parser installation derive from that registry.
+
 ## Required tools
 
 The managed macOS dotfiles install:
