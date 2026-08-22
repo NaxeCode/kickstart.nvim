@@ -350,12 +350,6 @@ for _, group in ipairs { 'CTutorTitle', 'CTutorText', 'CTutorQuestion', 'CTutorL
     equal(highlight.fg, normal_highlight.fg, group .. ' uses the high-contrast Normal foreground')
     check(highlight.bold == true and highlight.italic ~= true, group .. ' is bold and non-italic')
 end
-local section_highlight = vim.api.nvim_get_hl(0, { name = 'CTutorSection', link = false })
-equal(section_highlight.fg, 0xBFA0DD, 'section headings use a distinct violet hierarchy color')
-check(section_highlight.bold == true, 'section headings remain visually prominent')
-local detail_highlight = vim.api.nvim_get_hl(0, { name = 'CTutorDetail', link = false })
-equal(detail_highlight.fg, 0xD7CFC2, 'section details use a softer warm foreground')
-check(detail_highlight.bold ~= true and detail_highlight.italic ~= true, 'section details reduce white bold text density')
 local ai_plain = vim.api.nvim_get_hl(0, { name = 'CTutorCode', link = false })
 equal(ai_plain.fg, 0xF8F8F2, 'AI code uses a dedicated bright foreground')
 equal(ai_plain.bg, 0x241B2F, 'AI code uses a dedicated violet panel background')
@@ -443,6 +437,28 @@ local no_thinking_id = render.show(
 )
 check(annotation_text(no_thinking_id):find('no thinking', 1, true) ~= nil, 'provenance explicitly labels responses without thinking')
 render.clear(bufnr, no_thinking_id)
+local panel_preview_id = render.show(bufnr, 2, {
+    title = 'Ownership preview',
+    explanation = 'Keep the operational answer short beside the source.',
+    sections = {
+        { title = 'Storage', body = 'The array owns its writable bytes.' },
+        { title = 'Boundary', body = 'The terminator marks the logical end.' },
+    },
+    neutral_example = 'char label[] = "north";',
+}, 0.2, { model = 'test/panel-model', thinking_level = 'low', source = 'fresh' }, nil, { id = 'c', display = 'C', parser = 'c' }, nil, true)
+local preview_panel = render.get_panel()
+local preview_lines = vim.api.nvim_buf_get_lines(preview_panel.bufnr, 0, -1, false)
+check(table.concat(preview_lines, '\n'):find('```c\nchar label[] = "north";\n```', 1, true) ~= nil, 'detail panel uses a fenced language block')
+local preview_groups = {}
+for _, extmark in ipairs(vim.api.nvim_buf_get_extmarks(preview_panel.bufnr, render._test.panel_namespace, 0, -1, { details = true })) do
+    preview_groups[extmark[4].hl_group] = true
+end
+check(preview_groups.CTutorCodeType, 'detail-panel code retains the dedicated AI type palette')
+check(preview_groups.CTutorCodeIdentifier, 'detail-panel code retains the dedicated AI identifier palette')
+check(preview_groups.CTutorCodeString, 'detail-panel code retains the dedicated AI string palette')
+equal(vim.api.nvim_get_current_buf(), bufnr, 'automatic preview panel does not steal source focus')
+render.clear(bufnr, panel_preview_id)
+check(render.get_panel().bufnr == nil, 'clearing a structured annotation closes its detail panel')
 
 local info = tutor._test.project_info(bufnr)
 check(info and info.root == root, 'C buffer inside .tutor root is eligible')
@@ -613,19 +629,26 @@ local deeper_response = vim.deepcopy(deeper.response)
 local deeper_mark_id = deeper.mark_id
 check(deeper and deeper.response.kind == 'hint', 'deeper response stays a hint')
 check(deeper and deeper.response.neutral_example == nil, 'deeper response does not add a new worked example')
-local structured_groups = {}
-local section_breaks = 0
-for _, line in ipairs(virt_lines(deeper_mark_id) or {}) do
-    if #line == 1 and line[1][1] == '│' then section_breaks = section_breaks + 1 end
-    for _, chunk in ipairs(line) do
-        if chunk[1] == 'Storage' or chunk[1] == 'Termination' then structured_groups[chunk[1]] = chunk[2] end
-        if chunk[1]:find('The array owns writable character elements', 1, true) then structured_groups.body = chunk[2] end
-    end
-end
-equal(structured_groups.Storage, 'CTutorSection', 'first detail heading uses the distinct section style')
-equal(structured_groups.Termination, 'CTutorSection', 'second detail heading uses the distinct section style')
-equal(structured_groups.body, 'CTutorDetail', 'detail prose uses the softer regular-weight style')
-check(section_breaks >= 3, 'structured response inserts breathing room around detail sections')
+local inline_deeper = annotation_text(deeper_mark_id)
+check(inline_deeper:find('Detail · <leader>mo · 2 sections', 1, true) ~= nil, 'structured response advertises its two-section detail panel')
+check(inline_deeper:find('The array owns writable character elements', 1, true) == nil, 'structured detail no longer pushes source lines down as virtual text')
+local detail_panel = render.get_panel()
+check(detail_panel.bufnr and vim.api.nvim_buf_is_valid(detail_panel.bufnr), 'fresh structured response opens a persistent detail buffer')
+check(detail_panel.winid and vim.api.nvim_win_is_valid(detail_panel.winid), 'fresh structured response opens a visible side panel')
+equal(detail_panel.source_bufnr, bufnr, 'detail panel remains associated with its source buffer')
+equal(detail_panel.mark_id, deeper_mark_id, 'detail panel tracks the exact response extmark')
+equal(vim.api.nvim_get_current_buf(), bufnr, 'automatic detail panel preserves source-buffer focus')
+equal(vim.bo[detail_panel.bufnr].filetype, 'markdown', 'detail panel uses the existing rendered Markdown surface')
+check(vim.wo[detail_panel.winid].wrap and vim.wo[detail_panel.winid].linebreak, 'detail panel wraps prose at natural word boundaries')
+check(vim.wo[detail_panel.winid].breakindent, 'wrapped detail paragraphs retain readable indentation')
+local detail_lines = vim.api.nvim_buf_get_lines(detail_panel.bufnr, 0, -1, false)
+local detail_text = table.concat(detail_lines, '\n')
+equal(detail_lines[1], '# Writable character storage', 'detail panel starts with a semantic document title')
+check(detail_text:find('## Storage', 1, true) ~= nil, 'first response section becomes a Markdown heading')
+check(detail_text:find('## Termination', 1, true) ~= nil, 'second response section becomes a Markdown heading')
+check(detail_text:find('The array owns writable character elements', 1, true) ~= nil, 'detail panel preserves the complete first-section explanation')
+check(detail_text:find('> [!TIP]', 1, true) ~= nil, 'optional next direction uses a rendered Markdown callout')
+equal(vim.fn.exists ':CTutorOpen', 2, 'structured response panel is exposed as a user command')
 check(not render.exists(bufnr, second_mark_id), 'completed deeper hint atomically replaces the previous decoration')
 local deeper_line = render.position(bufnr, deeper_mark_id)
 vim.api.nvim_buf_set_lines(bufnr, 0, 0, false, { '// movement after deeper hint' })
@@ -665,7 +688,9 @@ equal(reply.request.previous_response, deeper_response, 'follow-up request carri
 check(reply.request.cache_key == nil, 'learner replies remain session-only and never enter the persistent answer cache')
 equal(vim.tbl_count(tutor._test.state.cache), cache_count_before_reply, 'reply feedback does not alter persistent marker cache entries')
 check(not render.exists(bufnr, permanent_mark_id), 'completed reply feedback atomically replaces the preceding question')
-check(annotation_text(reply.mark_id):find('You · ' .. learner_reply, 1, true) ~= nil, 'follow-up feedback shows the learner request')
+check(annotation_text(reply.mark_id):find('You · Explain how writable', 1, true) ~= nil, 'follow-up feedback keeps a compact learner-request summary')
+local reply_panel_text = table.concat(vim.api.nvim_buf_get_lines(render.get_panel().bufnr, 0, -1, false), '\n')
+check(reply_panel_text:find('> **You:** ' .. learner_reply, 1, true) ~= nil, 'follow-up detail panel preserves the exact learner request')
 check(annotation_text(reply.mark_id):find('Next · Would you like', 1, true) ~= nil, 'model response offers a non-quiz next learning direction')
 check(annotation_text(reply.mark_id):find('Follow up · <leader>mq (optional)', 1, true) ~= nil, 'response visibly advertises optional free-form follow-up')
 equal(vim.fn.exists ':CTutorReply', 2, 'follow-up workflow is exposed as a user command')
@@ -677,13 +702,21 @@ check(tutor.toggle_message(), 'message visibility toggle hides the selected tuto
 check(render.get(bufnr, reply.mark_id).hidden == true, 'hidden response retains explicit visibility state')
 check(render.exists(bufnr, reply.mark_id), 'hidden response keeps its extmark anchor')
 check(virt_lines(reply.mark_id) == nil, 'hidden response removes its virtual message lines')
+check(render.get_panel().bufnr == nil, 'hiding a structured response closes its detail panel')
 equal(render.position(bufnr, reply.mark_id), reply_position, 'hidden response stays attached to its marker')
 equal(vim.api.nvim_buf_get_lines(bufnr, 0, -1, false), source_before_visibility_toggle, 'hiding a response does not edit its comment or source')
 check(tutor.toggle_message(), 'message visibility toggle restores the selected tutor response')
 check(render.get(bufnr, reply.mark_id).hidden ~= true, 'restored response clears hidden visibility state')
-check(annotation_text(reply.mark_id):find('You · ' .. learner_reply, 1, true) ~= nil, 'restored response preserves exact conversational content')
+check(annotation_text(reply.mark_id):find('You · Explain how writable', 1, true) ~= nil, 'restored response preserves its learner-request summary')
 equal(vim.api.nvim_buf_get_lines(bufnr, 0, -1, false), source_before_visibility_toggle, 'showing a response does not edit its comment or source')
 equal(vim.fn.exists ':CTutorMessage', 2, 'message visibility is exposed as a user command')
+check(tutor.open_message(), 'detail panel can be reopened for the selected response')
+local reopened_panel = render.get_panel()
+equal(reopened_panel.mark_id, reply.mark_id, 'reopened panel displays the selected response')
+equal(vim.api.nvim_get_current_buf(), reopened_panel.bufnr, 'manual panel opening focuses the rendered answer')
+local source_windows = vim.fn.win_findbuf(bufnr)
+check(#source_windows > 0, 'source buffer remains visible beside the detail panel')
+vim.api.nvim_set_current_win(source_windows[1])
 permanent_mark_id = reply.mark_id
 vim.api.nvim_win_set_cursor(0, { render.position(bufnr, permanent_mark_id), 0 })
 check(not tutor.dismiss(), 'completed conversational decoration remains until its marker is removed')

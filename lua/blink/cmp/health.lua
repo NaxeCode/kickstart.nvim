@@ -1,4 +1,6 @@
 local health = {}
+vim.cmd.packadd 'blink.cmp'
+
 
 function health.report_system()
   vim.health.start 'System'

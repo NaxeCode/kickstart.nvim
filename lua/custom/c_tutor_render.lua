@@ -4,6 +4,8 @@ local namespace = vim.api.nvim_create_namespace 'c_tutor'
 local marks = {}
 local latest = {}
 local sequence = 0
+local panel_namespace = vim.api.nvim_create_namespace 'c_tutor_panel'
+local panel = {}
 
 local AI_CODE_THEME = {
     CTutorCode = { fg = '#F8F8F2', bg = '#241B2F', ctermfg = 231, ctermbg = 234 },
@@ -31,8 +33,6 @@ local function define_highlights()
     vim.api.nvim_set_hl(0, 'CTutorText', vim.deepcopy(main))
     vim.api.nvim_set_hl(0, 'CTutorQuestion', vim.deepcopy(main))
     vim.api.nvim_set_hl(0, 'CTutorLearner', vim.deepcopy(main))
-    vim.api.nvim_set_hl(0, 'CTutorSection', { fg = '#BFA0DD', ctermfg = 183, bold = true, italic = false })
-    vim.api.nvim_set_hl(0, 'CTutorDetail', { fg = '#D7CFC2', ctermfg = 252, bold = false, italic = false })
     for group, highlight in pairs(AI_CODE_THEME) do
         vim.api.nvim_set_hl(0, group, vim.deepcopy(highlight))
     end
@@ -82,14 +82,6 @@ local function add_panel_text(target, first_prefix, continuation_prefix, text, h
             { line, highlight },
         }
     end
-end
-local function add_section(target, section, width)
-    target[#target + 1] = { { '│', 'CTutorAccent' } }
-    target[#target + 1] = {
-        { '│  ▸ ', 'CTutorAccent' },
-        { section.title, 'CTutorSection' },
-    }
-    add_panel_text(target, '│    ', '│    ', section.body, 'CTutorDetail', width)
 end
 
 local function split_code_lines(code)
@@ -229,6 +221,7 @@ end
 
 function M.clear(bufnr, id)
     if not bufnr then return end
+    if panel.source_bufnr == bufnr and (not id or panel.mark_id == id) then M.close_panel() end
     local bucket = marks[bufnr]
     if id then
         local mark = bucket and bucket[id]
@@ -344,8 +337,194 @@ local function provenance_label(provenance)
     local source = provenance.source == 'cache' and 'cache hit' or 'fresh'
     return ('╰─ 󰒓 %s · 󰔟 %s · 󰆓 %s · <leader>mv hide'):format(model, thinking, source)
 end
+local function append_text(lines, text, prefix)
+    prefix = prefix or ''
+    for line in (text .. '\n'):gmatch '(.-)\n' do
+        lines[#lines + 1] = prefix .. line
+    end
+end
 
-function M.show(bufnr, anchor_line, response, elapsed_seconds, provenance, id, profile, learner_reply)
+local function panel_markdown(mark)
+    local response = mark.response
+    local profile = mark.profile or { id = 'c', display = 'C', parser = 'c' }
+    local lines = { '# ' .. response.title, '' }
+    local code_rows = {}
+
+    if mark.learner_reply then
+        append_text(lines, mark.learner_reply, '> **You:** ')
+        lines[#lines + 1] = ''
+    end
+    lines[#lines + 1] = '**' .. response.explanation .. '**'
+
+    for _, section in ipairs(response.sections or {}) do
+        lines[#lines + 1] = ''
+        lines[#lines + 1] = '## ' .. section.title
+        lines[#lines + 1] = ''
+        append_text(lines, section.body)
+    end
+
+    if response.neutral_example then
+        lines[#lines + 1] = ''
+        lines[#lines + 1] = ('## AI %s example'):format(profile.display)
+        lines[#lines + 1] = ''
+        lines[#lines + 1] = '```' .. (profile.id or profile.parser or '')
+        local highlighted = ai_code_lines(response.neutral_example, profile.parser or profile.id)
+        for _, chunks in ipairs(highlighted) do
+            local code_line = ''
+            for _, chunk in ipairs(chunks) do
+                code_line = code_line .. chunk[1]
+            end
+            lines[#lines + 1] = code_line
+            code_rows[#code_rows + 1] = { row = #lines - 1, chunks = chunks }
+        end
+        lines[#lines + 1] = '```'
+    end
+
+    if response.question then
+        lines[#lines + 1] = ''
+        lines[#lines + 1] = '> [!TIP]'
+        lines[#lines + 1] = '> **Next:** ' .. response.question
+    end
+
+    local provenance = mark.provenance or {}
+    local model = type(provenance.model) == 'string' and provenance.model ~= '' and provenance.model or 'unknown model'
+    local thinking = type(provenance.thinking_level) == 'string' and provenance.thinking_level ~= '' and ('thinking ' .. provenance.thinking_level)
+        or 'no thinking'
+    local source = provenance.source == 'cache' and 'cache hit' or 'fresh'
+    lines[#lines + 1] = ''
+    lines[#lines + 1] = '---'
+    lines[#lines + 1] = ''
+    lines[#lines + 1] = '`<leader>mq` follow up · `<leader>mm` deeper · `<leader>mu` reroll · `q` close'
+    lines[#lines + 1] = ''
+    lines[#lines + 1] = ('*%s · %s · %s · %s*'):format(format_elapsed(mark.elapsed_seconds or 0), model, thinking, source)
+    return lines, code_rows
+end
+
+local function panel_source_window()
+    for _, winid in ipairs(vim.fn.win_findbuf(panel.source_bufnr or -1)) do
+        if vim.api.nvim_win_is_valid(winid) then return winid end
+    end
+end
+
+local function focus_panel_source()
+    local winid = panel_source_window()
+    if not winid then return false end
+    vim.api.nvim_set_current_win(winid)
+    return true
+end
+
+local function set_panel_keymaps(bufnr)
+    local options = { buffer = bufnr, silent = true }
+    vim.keymap.set('n', 'q', function() M.close_panel() end, vim.tbl_extend('force', options, { desc = 'Close tutor detail' }))
+    for keys, action in pairs {
+        ['<leader>mq'] = 'reply',
+        ['<leader>mm'] = 'more',
+        ['<leader>mu'] = 'reroll',
+        ['<leader>mv'] = 'toggle_message',
+    } do
+        vim.keymap.set('n', keys, function()
+            if focus_panel_source() then require('custom.c_tutor')[action]() end
+        end, options)
+    end
+end
+
+local function create_panel_buffer()
+    local bufnr = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_buf_set_name(bufnr, 'Tutor://response')
+    vim.bo[bufnr].buftype = 'nofile'
+    vim.bo[bufnr].bufhidden = 'wipe'
+    vim.bo[bufnr].swapfile = false
+    vim.bo[bufnr].undolevels = -1
+    set_panel_keymaps(bufnr)
+    vim.api.nvim_create_autocmd('BufWipeout', {
+        buffer = bufnr,
+        once = true,
+        callback = function()
+            if panel.bufnr == bufnr then panel = {} end
+        end,
+    })
+    return bufnr
+end
+
+local function decorate_panel_code(bufnr, code_rows)
+    vim.api.nvim_buf_clear_namespace(bufnr, panel_namespace, 0, -1)
+    for _, code_row in ipairs(code_rows) do
+        local column = 0
+        for _, chunk in ipairs(code_row.chunks) do
+            local length = #chunk[1]
+            if length > 0 then
+                vim.api.nvim_buf_set_extmark(bufnr, panel_namespace, code_row.row, column, {
+                    end_row = code_row.row,
+                    end_col = column + length,
+                    hl_group = chunk[2],
+                    hl_mode = 'replace',
+                    priority = 200,
+                })
+            end
+            column = column + length
+        end
+    end
+end
+
+local function update_panel_buffer(mark)
+    local lines, code_rows = panel_markdown(mark)
+    vim.bo[panel.bufnr].modifiable = true
+    vim.api.nvim_buf_set_lines(panel.bufnr, 0, -1, false, lines)
+    vim.bo[panel.bufnr].modifiable = false
+    vim.bo[panel.bufnr].filetype = 'markdown'
+    decorate_panel_code(panel.bufnr, code_rows)
+end
+
+function M.close_panel()
+    local winid = panel.winid
+    local bufnr = panel.bufnr
+    panel = {}
+    if winid and vim.api.nvim_win_is_valid(winid) then pcall(vim.api.nvim_win_close, winid, true) end
+    if bufnr and vim.api.nvim_buf_is_valid(bufnr) then pcall(vim.api.nvim_buf_delete, bufnr, { force = true }) end
+    return winid ~= nil or bufnr ~= nil
+end
+
+function M.open_panel(bufnr, id, focus)
+    local mark = M.get(bufnr, id)
+    if not mark or mark.state ~= 'response' or not mark.response.sections then return false end
+    local source_win = nil
+    for _, winid in ipairs(vim.fn.win_findbuf(bufnr)) do
+        if vim.api.nvim_win_is_valid(winid) then
+            source_win = winid
+            break
+        end
+    end
+    if not source_win then return false end
+
+    local source_tab = vim.api.nvim_win_get_tabpage(source_win)
+    if panel.winid and vim.api.nvim_win_is_valid(panel.winid) and vim.api.nvim_win_get_tabpage(panel.winid) ~= source_tab then M.close_panel() end
+    if not panel.bufnr or not vim.api.nvim_buf_is_valid(panel.bufnr) then panel.bufnr = create_panel_buffer() end
+    if not panel.winid or not vim.api.nvim_win_is_valid(panel.winid) then
+        local source_width = vim.api.nvim_win_get_width(source_win)
+        panel.winid = vim.api.nvim_open_win(panel.bufnr, false, { split = 'right', win = source_win })
+        vim.api.nvim_win_set_width(panel.winid, math.max(42, math.min(80, math.floor(source_width * 0.48))))
+        vim.wo[panel.winid].wrap = true
+        vim.wo[panel.winid].linebreak = true
+        vim.wo[panel.winid].breakindent = true
+        vim.wo[panel.winid].number = false
+        vim.wo[panel.winid].relativenumber = false
+        vim.wo[panel.winid].signcolumn = 'no'
+        vim.wo[panel.winid].foldcolumn = '0'
+        vim.wo[panel.winid].winfixwidth = true
+        vim.wo[panel.winid].winbar = ' 󰚩 Tutor '
+    end
+
+    panel.source_bufnr = bufnr
+    panel.mark_id = mark.id
+    update_panel_buffer(mark)
+    vim.api.nvim_win_set_cursor(panel.winid, { 1, 0 })
+    if focus then vim.api.nvim_set_current_win(panel.winid) end
+    return true
+end
+
+function M.get_panel() return panel end
+
+function M.show(bufnr, anchor_line, response, elapsed_seconds, provenance, id, profile, learner_reply, open_detail)
     local width = available_width(bufnr)
     local lines = {
         {
@@ -356,17 +535,20 @@ function M.show(bufnr, anchor_line, response, elapsed_seconds, provenance, id, p
     if elapsed_seconds then lines[1][#lines[1] + 1] = { (' · %s'):format(format_elapsed(elapsed_seconds)), 'CTutorAccent' } end
     if learner_reply then add_panel_text(lines, '│  You · ', '│    ', learner_reply, 'CTutorLearner', width) end
     add_panel_text(lines, '│  ', '│  ', response.explanation, 'CTutorText', width)
-    for _, section in ipairs(response.sections or {}) do
-        add_section(lines, section, width)
+    if response.sections then
+        lines[#lines + 1] = {
+            { '│  󰈙 Detail · ', 'CTutorAccent' },
+            { '<leader>mo', 'CTutorQuestion' },
+            { (' · %d sections'):format(#response.sections), 'CTutorAccent' },
+        }
     end
-    if response.sections then lines[#lines + 1] = { { '│', 'CTutorAccent' } } end
     if response.question then add_panel_text(lines, '│  󰋗 Next · ', '│    ', response.question, 'CTutorQuestion', width) end
     lines[#lines + 1] = {
         { '│  Follow up · ', 'CTutorAccent' },
         { '<leader>mq', 'CTutorQuestion' },
         { ' (optional)', 'CTutorAccent' },
     }
-    if response.neutral_example then
+    if response.neutral_example and not response.sections then
         profile = profile or { id = 'c', display = 'C', parser = 'c' }
         local highlighted_lines = ai_code_lines(response.neutral_example, profile.parser or profile.id)
         local first_prefix = ('│  󰌌 AI %s · '):format(profile.display)
@@ -418,6 +600,7 @@ function M.show(bufnr, anchor_line, response, elapsed_seconds, provenance, id, p
         order = next_order(),
     }
     latest[bufnr] = id
+    if open_detail and response.sections then M.open_panel(bufnr, id, false) end
     return id
 end
 function M.toggle_visibility(bufnr, id)
@@ -439,6 +622,7 @@ function M.toggle_visibility(bufnr, id)
     })
     if not ok then return false end
     mark.anchor_line = position[1] + 1
+    if panel.source_bufnr == bufnr and panel.mark_id == mark.id then M.close_panel() end
     mark.hidden = true
     return true, false
 end
@@ -474,6 +658,7 @@ M.wrap = wrap
 M._test = {
     ai_code_lines = ai_code_lines,
     capture_group = capture_group,
+    panel_namespace = panel_namespace,
 }
 
 return M

@@ -42,11 +42,12 @@ No observation and no model requests.
 - `// tutor: <question>`, `// coach: <question>`, `// t: <question>`, and `// c: <question>` never start work during Insert mode. InsertLeave may start the stable marker after 250 ms; Normal-mode changes and save remain marker-only fallback triggers.
 - Syntax answers lead with the direct spelling or API form, then include the useful context and caveats needed to make it usable, up to 80 words, with the smallest useful neutral example when appropriate.
 - Concept and whole-file answers may use up to 240 words to explain responsibilities, flow, rationale, and failure behavior instead of compressing the response into one hint.
-- Longer concept, diagnostic, deeper, and follow-up responses use a short bold orientation plus 2 to 4 labeled detail sections. Violet headings, blank separators, and softer regular-weight detail text prevent a long answer from becoming one condensed white block.
+- Longer concept, diagnostic, deeper, and follow-up responses keep only a bold orientation beside the source marker. Their 2 to 4 labeled sections open in the right-hand Markdown panel used by established Neovim assistant UIs; rendered headings, wrapping, and code blocks provide the full reading hierarchy without pushing source lines off screen.
 - Tutor output never asks retrieval, prediction, or quiz questions. It may offer one optional highest-value adjacent direction, which the learner can ignore.
 - Classification is automatic; optional `syntax:` and `concept:` prefixes resolve ambiguity.
 - `<leader>me` explains the root diagnostic at the cursor.
 - `<leader>mq` opens a private follow-up prompt for the selected or latest response. The learner may accept the offered direction or write any different follow-up; the tutor uses the preceding response and current file context, then atomically replaces the old annotation.
+- `<leader>mo` / `:CTutorOpen` opens or refocuses the selected or latest structured response in the Markdown detail panel. Fresh structured responses open it automatically without moving focus from the source; `q` closes it.
 - `<leader>mm` requests one deeper explanation or hint; the successful result atomically replaces and persists as that marker's permanent decoration.
 - `<leader>mu` / `:CTutorReroll` bypasses the selected response's cache entry. The existing decoration remains visible while the fresh request runs; success atomically replaces both the decoration and persisted cache entry.
 - `<leader>mv` / `:CTutorMessage` reversibly hides or shows the selected or latest completed message while keeping its extmark, cached response, and source comment intact.
@@ -104,7 +105,7 @@ Validation rules:
 - Restricted official Meta Muse Contributor RPC is the default; portable direct Gemini priority inference remains an explicit low-latency alternative.
 - Explicit `// tutor:`, `// coach:`, `// t:`, and `// c:` detection.
 - Bounded context construction and secret gate.
-- Structured response parsing and virtual-line rendering.
+- Compact virtual-line summaries plus a wrapped, rendered Markdown side panel for structured responses.
 - Off/ask modes, status, dismiss, retry, and process lifecycle.
 
 ### Phase 2 — Diagnostic coach

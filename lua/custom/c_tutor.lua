@@ -745,7 +745,8 @@ local function handle_result(generation, request, mark_id, err, text, event)
     if marker_question_for(request) then response.anchor_line = request.anchor_line end
     local elapsed_seconds = (vim.uv.hrtime() - request.started_at) / 1000000000
     local provenance = response_provenance('fresh', event)
-    local rendered_id = render.show(request.bufnr, response.anchor_line, response, elapsed_seconds, provenance, mark_id, request.profile, request.learner_reply)
+    local rendered_id =
+        render.show(request.bufnr, response.anchor_line, response, elapsed_seconds, provenance, mark_id, request.profile, request.learner_reply, true)
     if rendered_id ~= mark_id then remove_annotation(request.bufnr, mark_id, 'extmark_recreated') end
     annotation_bucket(request.bufnr)[rendered_id] = {
         request = request,
@@ -1202,6 +1203,20 @@ function M.reply(answer)
     return true
 end
 
+function M.open_message()
+    local bufnr = vim.api.nvim_get_current_buf()
+    local previous = selected_response(bufnr)
+    if not previous or not previous.response.sections then
+        notify('No detailed tutor response is available to open', vim.log.levels.INFO)
+        return false
+    end
+    if not render.open_panel(bufnr, previous.mark_id, true) then
+        notify('Tutor detail panel could not be opened', vim.log.levels.WARN)
+        return false
+    end
+    return true
+end
+
 function M.toggle_message()
     local bufnr = vim.api.nvim_get_current_buf()
     local previous = selected_response(bufnr)
@@ -1568,6 +1583,7 @@ function M.setup(opts)
     vim.api.nvim_create_user_command('CTutorMore', M.more, {})
     vim.api.nvim_create_user_command('CTutorReroll', M.reroll, {})
     vim.api.nvim_create_user_command('CTutorMessage', M.toggle_message, {})
+    vim.api.nvim_create_user_command('CTutorOpen', M.open_message, {})
     vim.api.nvim_create_user_command('CTutorDismiss', M.dismiss, {})
     vim.api.nvim_create_user_command('CTutorToggle', M.toggle, {})
     vim.api.nvim_create_user_command('CTutorStatus', M.status, {})

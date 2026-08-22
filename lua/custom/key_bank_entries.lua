@@ -205,6 +205,13 @@ return {
                 },
                 { id = 'c-tutor-more', action = 'Deeper tutor hint', keys = 'SPACE M M', vim = '<leader>mm' },
                 {
+                    id = 'c-tutor-open',
+                    action = 'Open detailed tutor response',
+                    keys = 'SPACE M O',
+                    vim = '<leader>mo',
+                    detail = 'Reopens the rendered Markdown side panel for the selected or latest structured response.',
+                },
+                {
                     id = 'c-tutor-reroll',
                     action = 'Reroll tutor response',
                     keys = 'SPACE M U',
