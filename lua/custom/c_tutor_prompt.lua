@@ -14,20 +14,24 @@ Return exactly one compact JSON object and no Markdown fence or surrounding pros
 - anchor_line: integer inside the supplied source range (omit only for silence)
 - concept: short dotted or dashed identifier
 - title: short label
-- explanation: at most 45 words
-- question: optional single retrieval question, at most 18 words
+- explanation: complete answer sized to the question, at most 240 words
+- question: optional highest-value follow-up learning offer, at most 24 words
 - neutral_example: optional plain source text in the request language, at most three lines
 - confidence: number from 0 to 1
 
 Interaction rules:
 - ask: First classify the requested help.
-  - syntax means recalling language spelling, a declaration, a type, or an API form. Return kind "answer" and help_kind "syntax". Give one safest ordinary answer in one sentence of at most 20 words, never ask a question, and include one minimal unrelated example only when concrete syntax helps. When an example is present, put all source-language spelling only in neutral_example; explanation must contain no code or backticks. Do not list alternatives or mention adjacent APIs, types, and caveats unless explicitly asked or required to make the answer correct.
-  - concept means reasoning about a model, algorithm, design choice, tradeoff, or project solution. Return kind "hint" and help_kind "concept". Give one decision axis or reasoning step in at most 24 words, then one targeted question of at most 14 words. Do not list every consideration. Never include an example or project-ready code.
-  - Explicit "syntax:" or "concept:" prefixes override automatic classification. A request for exact project-solving code is concept help and must remain a hint with no code, pseudocode, formula, operators, copied constants, or transformed project control flow.
-- diagnostic: Return kind "hint". Name the underlying rule in the request language, say whether the diagnostic appears primary or consequential, and end with one targeted question or hint. Never provide the corrected project line.
-- more: Return kind "hint". Deepen the preceding explanation by one level. Do not cross into a project-ready implementation.
-- reply: Evaluate learner_reply against the preceding tutor question and supplied source. Return kind "answer" when substantially correct, "hint" when incomplete, or "misconception" when wrong. Explain the decisive point in at most 30 words. Ask at most one next question only when it usefully advances the same idea. Never include an example, score, mastery claim, or project-ready code.
-- coach: Return one concise hint or misconception only for a meaningful safety or learning issue. Otherwise return {"version":1,"kind":"silence","confidence":1}. Never include neutral_example for coach.
+  - syntax means recalling language spelling, a declaration, a type, or an API form. Return kind "answer" and help_kind "syntax". Lead with the direct answer, then include the context, safety, ownership, or API caveats needed to make it useful, up to 120 words. Include one minimal unrelated example only when concrete syntax helps. When an example is present, put all source-language spelling only in neutral_example; explanation must contain no code or backticks. Optionally offer one useful next direction.
+  - concept means reasoning about a model, algorithm, design choice, tradeoff, project structure, or project solution. Return kind "hint" and help_kind "concept". Fully explain the relevant responsibilities, flow, rationale, and failure behavior, up to 240 words, then offer one highest-value direction the learner may explore next. Never include an example or project-ready code.
+  - Explicit "syntax:" or "concept:" prefixes override automatic classification. A request for exact project-solving code is concept help and must remain a hint with no patch, replacement block, or completed project expression.
+- diagnostic: Return kind "hint". Explain the underlying rule, identify primary versus consequential diagnostics, and include enough causal detail to make the failure understandable, up to 200 words. Optionally offer one useful next direction. Never provide the corrected project line.
+- more: Return kind "hint". Deepen the preceding explanation with the missing context or causal layer, up to 240 words. Optionally offer one useful next direction. Do not cross into a project-ready implementation.
+- reply: Treat learner_reply as the learner's chosen follow-up request or direction, whether or not it matches the preceding offer. Answer it directly with the preceding response and source as context, up to 240 words. Optionally offer one highest-value direction to continue. Never score, quiz, grade, claim mastery, or provide project-ready code.
+- coach: Return one focused hint or misconception, up to 60 words, only for a meaningful safety or learning issue. Otherwise return {"version":1,"kind":"silence","confidence":1}. Never include neutral_example for coach.
+
+Never ask a retrieval, recall, prediction, or quiz question. Any question field is an optional learning-path offer, such as asking whether the learner wants the most useful adjacent concept explained. The learner may ignore it or submit a different follow-up.
+
+Do not compress a substantive answer merely to be brief. Match depth to the request: a simple syntax lookup can stay short, while whole-file, architecture, design, and failure-flow questions should receive a thorough explanation.
 
 Never return a patch, diff, replacement block, completed project expression, multi-step implementation recipe, or text intended for insertion. Do not grade mastery or modify tutor state.
 ]]
@@ -55,8 +59,8 @@ local allowed_fields = {
 local limits = {
     concept = 96,
     title = 96,
-    explanation = 500,
-    question = 200,
+    explanation = 8000,
+    question = 500,
     neutral_example = 360,
 }
 
@@ -97,19 +101,23 @@ function M.build(request)
     local language = profile.display
     local constraints
     if request.interaction == 'coach' then
-        constraints = ('Return only one %s hint, one misconception, or silence. No example and no corrected project code.'):format(language)
+        constraints = ('Return one focused %s hint or misconception of at most 60 words, or silence. No example and no corrected project code.'):format(
+            language
+        )
     elseif request.interaction == 'diagnostic' then
-        constraints = ('Return kind hint. Explain the %s rule and root-versus-consequence status, then give one hint or question. No corrected project line.'):format(
+        constraints = ('Return kind hint. Thoroughly explain the %s rule, causal chain, and root-versus-consequence status in at most 200 words. No corrected project line. Optionally offer one useful next direction; never ask a retrieval or quiz question.'):format(
             language
         )
     elseif request.interaction == 'reply' then
-        constraints = ('Evaluate the learner reply to the preceding %s tutor question. Return answer, hint, or misconception with at most 30 words of feedback and at most one useful next question. No score, mastery claim, example, or project-ready code.'):format(
+        constraints = ('Treat the learner reply as their chosen %s follow-up request, even when it differs from the preceding offer. Answer directly with enough context, up to 240 words, then optionally offer one highest-value next direction. Never evaluate recall, score, quiz, or grade. No project-ready code.'):format(
             language
         )
     elseif request.interaction == 'more' then
-        constraints = ('Return kind hint with exactly one deeper layer of %s explanation and no project-ready solution.'):format(language)
+        constraints = ('Return kind hint with the missing context or causal layer of the %s explanation, up to 240 words, and no project-ready solution. Optionally offer one useful next direction; never ask a quiz question.'):format(
+            language
+        )
     else
-        constraints = ('Classify help_kind for %s. Syntax recall: one safest direct answer, at most 20 words, no question or alternatives; when using an example, put all %s code only in neutral_example and no code/backticks in explanation. Concept reasoning: one decision axis, at most 24 words, one question of at most 14 words, no list, example, or project-ready code. An exact project-solution request must contain no code, pseudocode, formula, operators, copied constants, or transformed control flow.'):format(
+        constraints = ('Classify help_kind for %s. Syntax recall: lead with the direct answer, then include useful context and caveats, up to 120 words; when using an example, put all %s code only in neutral_example and no code/backticks in explanation. Concept reasoning: thoroughly explain responsibilities, flow, rationale, and failure behavior, up to 240 words; no example or project-ready code. Do not shorten whole-file or architecture answers artificially. Any question must be an optional highest-value follow-up offer, never a retrieval or quiz prompt.'):format(
             language,
             language
         )
@@ -177,20 +185,29 @@ function M.decode(text, request)
     if err then return nil, err end
 
     if not response.concept:match '^[%w_.%-]+$' then return nil, 'concept must be a compact identifier' end
-    if word_count(response.explanation) > 45 then return nil, 'explanation exceeds 45 words' end
-    if response.question and word_count(response.question) > 18 then return nil, 'question exceeds 18 words' end
+    local explanation_limit = 240
+    if request.interaction == 'coach' then
+        explanation_limit = 60
+    elseif request.interaction == 'diagnostic' then
+        explanation_limit = 200
+    elseif request.interaction == 'reply' then
+        explanation_limit = 240
+    elseif request.interaction == 'ask' and response.help_kind == 'syntax' then
+        explanation_limit = 120
+    end
+    if word_count(response.explanation) > explanation_limit then return nil, ('explanation exceeds %d words'):format(explanation_limit) end
+    if response.question and word_count(response.question) > 24 then return nil, 'question exceeds 24 words' end
     if request.interaction == 'ask' then
         if response.help_kind ~= 'syntax' and response.help_kind ~= 'concept' then return nil, 'ask response must classify help_kind' end
         if response.help_kind == 'syntax' then
             if response.kind ~= 'answer' then return nil, 'syntax help must be a direct answer' end
-            if response.question ~= nil then return nil, 'syntax help cannot ask a retrieval question' end
-            if word_count(response.explanation) > 24 then return nil, 'syntax explanation exceeds 24 words' end
+            if word_count(response.explanation) > 120 then return nil, 'syntax explanation exceeds 120 words' end
         else
             if response.kind ~= 'hint' then return nil, 'concept help must be hint-shaped' end
-            if response.question == nil then return nil, 'concept help requires one targeted question' end
-            if word_count(response.question) > 14 then return nil, 'concept question exceeds 14 words' end
+            if response.question == nil then return nil, 'concept help requires one optional follow-up offer' end
+            if word_count(response.question) > 24 then return nil, 'concept follow-up offer exceeds 24 words' end
             if response.neutral_example ~= nil then return nil, 'concept help cannot include an example' end
-            if word_count(response.explanation) > 24 then return nil, 'concept explanation exceeds 24 words' end
+            if word_count(response.explanation) > 240 then return nil, 'concept explanation exceeds 240 words' end
         end
     end
     if request.interaction == 'coach' and response.kind == 'answer' then return nil, 'coach responses cannot be direct answers' end
@@ -200,8 +217,8 @@ function M.decode(text, request)
             return nil, 'reply response must evaluate the learner answer'
         end
         if response.neutral_example ~= nil then return nil, 'reply responses cannot include examples' end
-        if word_count(response.explanation) > 30 then return nil, 'reply explanation exceeds 30 words' end
-        if response.question and word_count(response.question) > 14 then return nil, 'reply follow-up question exceeds 14 words' end
+        if word_count(response.explanation) > 240 then return nil, 'reply explanation exceeds 240 words' end
+        if response.question and word_count(response.question) > 24 then return nil, 'reply follow-up offer exceeds 24 words' end
     end
     if response.neutral_example then
         local example = response.neutral_example:gsub('\n$', '')

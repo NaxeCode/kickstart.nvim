@@ -40,13 +40,15 @@ No observation and no model requests.
 ### Ask
 
 - `// tutor: <question>`, `// coach: <question>`, `// t: <question>`, and `// c: <question>` never start work during Insert mode. InsertLeave may start the stable marker after 250 ms; Normal-mode changes and save remain marker-only fallback triggers.
-- Syntax recall receives one safest exact answer in at most 20 words, with no alternatives or retrieval question and only the smallest useful neutral example.
-- Concept reasoning receives one decision axis or reasoning step in at most 24 words and one targeted question of at most 14 words, with no list or worked code.
+- Syntax answers lead with the direct spelling or API form, then include the useful context and caveats needed to make it usable, up to 120 words, with the smallest useful neutral example when appropriate.
+- Concept and whole-file answers may use up to 240 words to explain responsibilities, flow, rationale, and failure behavior instead of compressing the response into one hint.
+- Tutor output never asks retrieval, prediction, or quiz questions. It may offer one optional highest-value adjacent direction, which the learner can ignore.
 - Classification is automatic; optional `syntax:` and `concept:` prefixes resolve ambiguity.
 - `<leader>me` explains the root diagnostic at the cursor.
-- When a tutor response asks a question, the annotation displays `<leader>mq`. That mapping opens a private editor prompt, submits the learner's answer with the preceding tutor response and current file context, then atomically replaces the question with concise feedback. A useful follow-up question can continue the same loop.
+- `<leader>mq` opens a private follow-up prompt for the selected or latest response. The learner may accept the offered direction or write any different follow-up; the tutor uses the preceding response and current file context, then atomically replaces the old annotation.
 - `<leader>mm` requests one deeper explanation or hint; the successful result atomically replaces and persists as that marker's permanent decoration.
 - `<leader>mu` / `:CTutorReroll` bypasses the selected response's cache entry. The existing decoration remains visible while the fresh request runs; success atomically replaces both the decoration and persisted cache entry.
+- `<leader>mv` / `:CTutorMessage` reversibly hides or shows the selected or latest completed message while keeping its extmark, cached response, and source comment intact.
 - `<leader>mx` cancels active work or dismisses non-marker responses. Completed marker decorations require removing their `// tutor:`, `// coach:`, `// t:`, or `// c:` marker.
 
 ### Coach — default enabled mode in `.tutor` projects
@@ -55,6 +57,7 @@ No observation and no model requests.
 - Entering Insert mode cancels active and queued tutor work for that buffer. Insert-mode edits only reconcile existing permanent decorations; they never schedule a model request.
 - Active work uses an orange framed tutor header with compact elapsed seconds. Completed annotations keep title, explanation, question, and learner-reply text white and bold. Generated examples carry an `AI <language>` badge and use that profile's Tree-sitter parser with a separate violet-backed neon palette; an unavailable parser or highlight query falls back to the same distinct AI panel instead of borrowing source-buffer colors.
 - Every completed annotation has an orange provenance footer naming the exact model selector, configured thinking level or `no thinking`, and `fresh` or `cache hit`.
+- Message visibility is session-local. A hidden annotation follows its source marker and remains eligible for follow-up, reroll, and deeper requests; reopening the buffer restores the cached response visibly.
 
 ## Privacy and rate policy
 
@@ -66,7 +69,7 @@ No observation and no model requests.
 - One request is in flight. Additional explicit marker requests wait in FIFO order; deleting a pending marker removes only that pending request.
 - Explicit markers debounce for 250 ms after InsertLeave, Normal-mode changes, or save.
 - Validated marker decorations, including the latest deeper hint, are cached by a SHA-256 key scoped to backend, exact model selector, thinking level, tutor root, project-relative file, and normalized question in `<stdpath('state')>/c-tutor/answers.json`. Switching models cannot silently reuse another model's answer. `<leader>me` diagnostic explanations use the same generation profile plus a fingerprint covering the project-relative file, diagnostic fields, anchor, and complete active-buffer context.
-- Learner replies and reply feedback are session-only. They participate in the in-memory request queue and privacy checks but are never written to the persistent response cache or lifecycle log as raw text.
+- Learner follow-ups and conversational feedback are session-only. They participate in the in-memory request queue and privacy checks but are never written to the persistent response cache or lifecycle log as raw text.
 - The shared response cache is mode `0600`, capped at 256 entries, and restores the exact structured response, original elapsed time, generating model, thinking level, backend metadata, and generation timestamp without another model request. Cache keys persist only hashes: no source slice, raw marker question, diagnostic payload, prompt, provider credential, or model session is stored. Direct request bodies are temporary `0600` files inside the private tutor runtime directory and are unlinked after completion or cancellation. Cached tutor response text and provenance are persistent model content; structured lifecycle diagnostics contain only relative files, line numbers, editor events, queue/cache outcomes, model selectors, thinking levels, and truncated question hashes.
 
 ## Lifecycle diagnostics
@@ -78,6 +81,9 @@ No observation and no model requests.
 ## Structured response contract
 
 Fields: `version`, `kind`, ask-only `help_kind`, `anchor_line`, `concept`, `title`, `explanation`, `question`, optional `neutral_example`, and `confidence`.
+
+`question` is retained as the wire-format field for compatibility, but its only permitted meaning is an optional next-direction offer; it must not test recall or require a response.
+
 
 Kinds: `answer`, `hint`, `misconception`, `silence`.
 

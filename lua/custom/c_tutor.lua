@@ -109,7 +109,7 @@ end
 
 local function save_state() return write_json(state_path(), { modes = state.saved.modes }, 'state_written', 'state_write_failed') end
 
-local CACHE_VERSION = 'tutor-responses-v7'
+local CACHE_VERSION = 'tutor-responses-v8'
 local CACHE_LIMIT = 256
 
 local function cache_path() return config.state_dir .. '/answers.json' end
@@ -1191,18 +1191,34 @@ function M.reply(answer)
     local bufnr = vim.api.nvim_get_current_buf()
     local previous = selected_response(bufnr)
     if not previous then
-        notify('No tutor response is available to answer', vim.log.levels.INFO)
-        return false
-    end
-    if type(previous.response.question) ~= 'string' or previous.response.question == '' then
-        notify('This tutor response did not ask a question', vim.log.levels.INFO)
+        notify('No tutor response is available to follow up', vim.log.levels.INFO)
         return false
     end
     if answer ~= nil then return submit_reply(previous, answer) end
 
-    vim.ui.input({ prompt = 'Tutor answer: ' }, function(value)
+    vim.ui.input({ prompt = 'Tutor follow-up: ' }, function(value)
         if value ~= nil then submit_reply(previous, value) end
     end)
+    return true
+end
+
+function M.toggle_message()
+    local bufnr = vim.api.nvim_get_current_buf()
+    local previous = selected_response(bufnr)
+    if not previous then
+        notify('No tutor message is available to toggle', vim.log.levels.INFO)
+        return false
+    end
+    local toggled, visible = render.toggle_visibility(bufnr, previous.mark_id)
+    if not toggled then
+        notify('Tutor message visibility could not be changed', vim.log.levels.WARN)
+        return false
+    end
+    log_request('annotation_visibility_changed', previous.request, {
+        mark_id = previous.mark_id,
+        visible = visible,
+    })
+    notify(visible and 'Tutor message shown' or 'Tutor message hidden')
     return true
 end
 
@@ -1551,6 +1567,7 @@ function M.setup(opts)
     vim.api.nvim_create_user_command('CTutorReply', function(command) M.reply(command.args ~= '' and command.args or nil) end, { nargs = '*' })
     vim.api.nvim_create_user_command('CTutorMore', M.more, {})
     vim.api.nvim_create_user_command('CTutorReroll', M.reroll, {})
+    vim.api.nvim_create_user_command('CTutorMessage', M.toggle_message, {})
     vim.api.nvim_create_user_command('CTutorDismiss', M.dismiss, {})
     vim.api.nvim_create_user_command('CTutorToggle', M.toggle, {})
     vim.api.nvim_create_user_command('CTutorStatus', M.status, {})

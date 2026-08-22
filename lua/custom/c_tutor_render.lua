@@ -332,7 +332,7 @@ local function provenance_label(provenance)
     local thinking = type(provenance.thinking_level) == 'string' and provenance.thinking_level ~= '' and ('thinking ' .. provenance.thinking_level)
         or 'no thinking'
     local source = provenance.source == 'cache' and 'cache hit' or 'fresh'
-    return ('╰─ 󰒓 %s · 󰔟 %s · 󰆓 %s'):format(model, thinking, source)
+    return ('╰─ 󰒓 %s · 󰔟 %s · 󰆓 %s · <leader>mv hide'):format(model, thinking, source)
 end
 
 function M.show(bufnr, anchor_line, response, elapsed_seconds, provenance, id, profile, learner_reply)
@@ -346,13 +346,12 @@ function M.show(bufnr, anchor_line, response, elapsed_seconds, provenance, id, p
     if elapsed_seconds then lines[1][#lines[1] + 1] = { (' · %s'):format(format_elapsed(elapsed_seconds)), 'CTutorAccent' } end
     if learner_reply then add_panel_text(lines, '│  You · ', '│    ', learner_reply, 'CTutorLearner', width) end
     add_panel_text(lines, '│  ', '│  ', response.explanation, 'CTutorText', width)
-    if response.question then
-        add_panel_text(lines, '│  󰋗 Question · ', '│    ', response.question, 'CTutorQuestion', width)
-        lines[#lines + 1] = {
-            { '│  Answer · ', 'CTutorAccent' },
-            { '<leader>mq', 'CTutorQuestion' },
-        }
-    end
+    if response.question then add_panel_text(lines, '│  󰋗 Next · ', '│    ', response.question, 'CTutorQuestion', width) end
+    lines[#lines + 1] = {
+        { '│  Follow up · ', 'CTutorAccent' },
+        { '<leader>mq', 'CTutorQuestion' },
+        { ' (optional)', 'CTutorAccent' },
+    }
     if response.neutral_example then
         profile = profile or { id = 'c', display = 'C', parser = 'c' }
         local highlighted_lines = ai_code_lines(response.neutral_example, profile.parser or profile.id)
@@ -401,10 +400,33 @@ function M.show(bufnr, anchor_line, response, elapsed_seconds, provenance, id, p
         elapsed_seconds = elapsed_seconds,
         provenance = provenance,
         learner_reply = learner_reply,
+        profile = profile,
         order = next_order(),
     }
     latest[bufnr] = id
     return id
+end
+function M.toggle_visibility(bufnr, id)
+    local mark = M.get(bufnr, id)
+    if not mark or mark.state ~= 'response' then return false end
+
+    if mark.hidden then
+        M.show(bufnr, mark.anchor_line, mark.response, mark.elapsed_seconds, mark.provenance, mark.id, mark.profile, mark.learner_reply)
+        return true, true
+    end
+
+    if not vim.api.nvim_buf_is_valid(bufnr) then return false end
+    local position = vim.api.nvim_buf_get_extmark_by_id(bufnr, namespace, mark.id, {})
+    if #position == 0 then return false end
+    local ok = pcall(vim.api.nvim_buf_set_extmark, bufnr, namespace, position[1], position[2], {
+        id = mark.id,
+        right_gravity = false,
+        priority = 110,
+    })
+    if not ok then return false end
+    mark.anchor_line = position[1] + 1
+    mark.hidden = true
+    return true, false
 end
 
 function M.exists(bufnr, id)

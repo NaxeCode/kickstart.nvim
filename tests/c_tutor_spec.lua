@@ -188,17 +188,22 @@ local reply_envelope = vim.json.decode(prompt.build {
     context_start = 2,
     context_end = 8,
     context = '4:int count = 4;',
-    question = 'Because the caller can recover.',
-    learner_reply = 'Because the caller can recover.',
+    question = 'Explain how the caller should choose a recovery policy.',
+    learner_reply = 'Explain how the caller should choose a recovery policy.',
     previous_response = {
         kind = 'hint',
-        question = 'Why return an error?',
+        question = 'Would you like to explore error recovery?',
     },
 })
-equal(reply_envelope.interaction, 'reply', 'reply prompt uses an explicit interaction contract')
-equal(reply_envelope.learner_reply, 'Because the caller can recover.', 'reply prompt identifies learner text separately from tutor questions')
-check(reply_envelope.question == nil, 'reply prompt does not mislabel the learner answer as a new question')
-equal(reply_envelope.previous_response.question, 'Why return an error?', 'reply prompt carries the preceding tutor question')
+equal(reply_envelope.interaction, 'reply', 'follow-up prompt uses an explicit interaction contract')
+equal(
+    reply_envelope.learner_reply,
+    'Explain how the caller should choose a recovery policy.',
+    'follow-up prompt identifies learner text separately from tutor offers'
+)
+check(reply_envelope.question == nil, 'follow-up prompt does not mislabel the learner request as a tutor question')
+equal(reply_envelope.previous_response.question, 'Would you like to explore error recovery?', 'follow-up prompt carries the preceding learning offer')
+check(prompt.SYSTEM:find('Never ask a retrieval, recall, prediction, or quiz question.', 1, true) ~= nil, 'prompt contract forbids quiz-style follow-ups')
 
 local validation_request = { interaction = 'ask', context_start = 2, context_end = 8 }
 local valid_response = vim.json.encode {
@@ -214,9 +219,9 @@ local valid_response = vim.json.encode {
 }
 local decoded = prompt.decode(valid_response, validation_request)
 check(decoded and decoded.kind == 'answer', 'valid structured response is accepted')
-local syntax_with_question = vim.json.decode(valid_response)
-syntax_with_question.question = 'Can you recall the answer?'
-check(prompt.decode(vim.json.encode(syntax_with_question), validation_request) == nil, 'syntax help cannot turn memorization into a quiz')
+local syntax_with_follow_up = vim.json.decode(valid_response)
+syntax_with_follow_up.question = 'Would you like to explore how array bounds relate to storage layout?'
+check(prompt.decode(vim.json.encode(syntax_with_follow_up), validation_request) ~= nil, 'syntax help may offer an optional adjacent learning direction')
 local valid_concept = vim.json.encode {
     version = 1,
     kind = 'hint',
@@ -225,13 +230,35 @@ local valid_concept = vim.json.encode {
     concept = 'c.arrays.layout',
     title = 'Array layout',
     explanation = 'Treat each subscript as an offset from the first stored element.',
-    question = 'How would two coordinates become one offset?',
+    question = 'Would you like to explore how two coordinates map to one offset?',
     confidence = 0.9,
 }
 check(prompt.decode(valid_concept, validation_request) ~= nil, 'concise concept help with one reasoning question is accepted')
 local concept_with_example = vim.json.decode(valid_concept)
 concept_with_example.neutral_example = 'int samples[4];'
 check(prompt.decode(vim.json.encode(concept_with_example), validation_request) == nil, 'concept help cannot collapse into worked code')
+local detailed_concept = vim.json.decode(valid_concept)
+detailed_concept.explanation = string.rep('detail ', 180)
+check(prompt.decode(vim.json.encode(detailed_concept), validation_request) ~= nil, 'substantive concept explanations may use enough space for full context')
+local oversized_concept = vim.json.decode(valid_concept)
+oversized_concept.explanation = string.rep('detail ', 241)
+check(prompt.decode(vim.json.encode(oversized_concept), validation_request) == nil, 'concept explanations retain a generous upper bound')
+local detailed_syntax = vim.json.decode(valid_response)
+detailed_syntax.explanation = string.rep('detail ', 100)
+check(prompt.decode(vim.json.encode(detailed_syntax), validation_request) ~= nil, 'syntax answers may include useful context beyond one sentence')
+local verbose_coach = {
+    version = 1,
+    kind = 'hint',
+    anchor_line = 4,
+    concept = 'c.arrays.bounds',
+    title = 'Array bounds',
+    explanation = string.rep('detail ', 61),
+    confidence = 0.9,
+}
+check(
+    prompt.decode(vim.json.encode(verbose_coach), { interaction = 'coach', context_start = 2, context_end = 8 }) == nil,
+    'ambient coaching remains bounded despite richer explicit answers'
+)
 local invalid_coach = vim.json.encode {
     version = 1,
     kind = 'answer',
@@ -247,14 +274,14 @@ local valid_reply = vim.json.encode {
     version = 1,
     kind = 'answer',
     anchor_line = 4,
-    concept = 'c.reasoning.reply',
-    title = 'Reasoning check',
-    explanation = 'Yes. Returning the error lets the caller choose the recovery policy.',
-    question = 'Which errors should remain fatal?',
+    concept = 'c.follow-up.recovery',
+    title = 'Recovery policy',
+    explanation = 'The caller owns recovery policy because it has the operational context needed to choose retry, fallback, or escalation.',
+    question = 'Would you like to explore how recovery policy affects observability?',
     confidence = 0.9,
 }
 local reply_validation_request = { interaction = 'reply', context_start = 2, context_end = 8 }
-check(prompt.decode(valid_reply, reply_validation_request) ~= nil, 'reply feedback accepts a concise evaluation and optional next question')
+check(prompt.decode(valid_reply, reply_validation_request) ~= nil, 'follow-up responses accept a thorough answer and optional next direction')
 local reply_with_example = vim.json.decode(valid_reply)
 reply_with_example.neutral_example = 'return false;'
 check(prompt.decode(vim.json.encode(reply_with_example), reply_validation_request) == nil, 'reply feedback cannot become project-ready code')
@@ -469,7 +496,7 @@ check(render.exists(bufnr, first_mark_id) and render.exists(bufnr, second_mark_i
 local cache_file = tutor._test.cache_path()
 wait_for(function() return vim.uv.fs_stat(cache_file) ~= nil end, 'marker answers are written to the persistent cache')
 local cache_document = vim.json.decode(table.concat(vim.fn.readfile(cache_file), '\n'))
-equal(cache_document.version, 'tutor-responses-v7', 'cache version identifies language-profiled provenance-bearing decorations')
+equal(cache_document.version, 'tutor-responses-v8', 'cache version invalidates artificially short tutor responses')
 equal(vim.tbl_count(cache_document.entries), 2, 'each distinct marker question has one cached answer')
 for key, entry in pairs(cache_document.entries) do
     check(#key == 64, 'cache entries use SHA-256 question keys')
@@ -563,7 +590,7 @@ equal(deeper_cache and deeper_cache.interaction, 'more', 'persisted marker cache
 local permanent_mark_id = render.exists(bufnr, deeper_mark_id) and deeper_mark_id or tutor._test.state.last_response[bufnr].mark_id
 local cache_count_before_reply = vim.tbl_count(tutor._test.state.cache)
 vim.api.nvim_win_set_cursor(0, { render.position(bufnr, permanent_mark_id), 0 })
-local learner_reply = 'One byte beyond the visible characters.'
+local learner_reply = 'Explain how writable string ownership should be documented.'
 local input_prompt
 local original_input = vim.ui.input
 vim.ui.input = function(options, callback)
@@ -572,8 +599,8 @@ vim.ui.input = function(options, callback)
 end
 local reply_started = tutor.reply()
 vim.ui.input = original_input
-check(reply_started, 'answer mapping opens an explicit learner reply request')
-equal(input_prompt, 'Tutor answer: ', 'answer mapping opens a focused editor prompt')
+check(reply_started, 'follow-up mapping opens an explicit learner request')
+equal(input_prompt, 'Tutor follow-up: ', 'follow-up mapping opens a focused editor prompt')
 check(render.exists(bufnr, permanent_mark_id), 'question remains visible while reply feedback is generated')
 wait_for(function()
     local last = tutor._test.state.last_response[bufnr]
@@ -581,14 +608,30 @@ wait_for(function()
 end, 'reply feedback replaces the selected tutor question')
 local reply = tutor._test.state.last_response[bufnr]
 local conversation_response = vim.deepcopy(reply.response)
-equal(reply.request.learner_reply, learner_reply, 'reply request keeps learner text in its dedicated field')
-equal(reply.request.previous_response, deeper_response, 'reply request carries the exact preceding tutor response')
+equal(reply.request.learner_reply, learner_reply, 'follow-up request keeps learner text in its dedicated field')
+equal(reply.request.previous_response, deeper_response, 'follow-up request carries the exact preceding tutor response')
 check(reply.request.cache_key == nil, 'learner replies remain session-only and never enter the persistent answer cache')
 equal(vim.tbl_count(tutor._test.state.cache), cache_count_before_reply, 'reply feedback does not alter persistent marker cache entries')
 check(not render.exists(bufnr, permanent_mark_id), 'completed reply feedback atomically replaces the preceding question')
-check(annotation_text(reply.mark_id):find('You · ' .. learner_reply, 1, true) ~= nil, 'reply feedback shows the learner answer')
-check(annotation_text(reply.mark_id):find('Answer · <leader>mq', 1, true) ~= nil, 'follow-up question visibly advertises its answer mapping')
-equal(vim.fn.exists ':CTutorReply', 2, 'reply workflow is exposed as a user command')
+check(annotation_text(reply.mark_id):find('You · ' .. learner_reply, 1, true) ~= nil, 'follow-up feedback shows the learner request')
+check(annotation_text(reply.mark_id):find('Next · Would you like', 1, true) ~= nil, 'model response offers a non-quiz next learning direction')
+check(annotation_text(reply.mark_id):find('Follow up · <leader>mq (optional)', 1, true) ~= nil, 'response visibly advertises optional free-form follow-up')
+equal(vim.fn.exists ':CTutorReply', 2, 'follow-up workflow is exposed as a user command')
+check(annotation_text(reply.mark_id):find('<leader>mv hide', 1, true) ~= nil, 'visible feedback advertises its reversible hide mapping')
+local source_before_visibility_toggle = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+local reply_position = render.position(bufnr, reply.mark_id)
+vim.api.nvim_win_set_cursor(0, { reply_position, 0 })
+check(tutor.toggle_message(), 'message visibility toggle hides the selected tutor response')
+check(render.get(bufnr, reply.mark_id).hidden == true, 'hidden response retains explicit visibility state')
+check(render.exists(bufnr, reply.mark_id), 'hidden response keeps its extmark anchor')
+check(virt_lines(reply.mark_id) == nil, 'hidden response removes its virtual message lines')
+equal(render.position(bufnr, reply.mark_id), reply_position, 'hidden response stays attached to its marker')
+equal(vim.api.nvim_buf_get_lines(bufnr, 0, -1, false), source_before_visibility_toggle, 'hiding a response does not edit its comment or source')
+check(tutor.toggle_message(), 'message visibility toggle restores the selected tutor response')
+check(render.get(bufnr, reply.mark_id).hidden ~= true, 'restored response clears hidden visibility state')
+check(annotation_text(reply.mark_id):find('You · ' .. learner_reply, 1, true) ~= nil, 'restored response preserves exact conversational content')
+equal(vim.api.nvim_buf_get_lines(bufnr, 0, -1, false), source_before_visibility_toggle, 'showing a response does not edit its comment or source')
+equal(vim.fn.exists ':CTutorMessage', 2, 'message visibility is exposed as a user command')
 permanent_mark_id = reply.mark_id
 vim.api.nvim_win_set_cursor(0, { render.position(bufnr, permanent_mark_id), 0 })
 check(not tutor.dismiss(), 'completed conversational decoration remains until its marker is removed')

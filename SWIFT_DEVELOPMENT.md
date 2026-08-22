@@ -53,10 +53,13 @@ Projects opt into the tutor by keeping `.tutor/state.json` at the repository roo
 | --- | --- |
 | `<leader>mt` | Toggle tutor coaching |
 | `<leader>me` | Explain the current diagnostic |
-| `<leader>mq` | Answer the question in the selected or latest tutor response |
+| `<leader>mq` | Write any follow-up about the selected or latest tutor response |
 | `<leader>mm` | Request one deeper explanation or hint |
 | `<leader>mu` | Reroll the response without using its cache entry |
+| `<leader>mv` | Reversibly hide or show the tutor message without changing its comment |
 | `<leader>mx` | Cancel active work or dismiss a non-marker response |
+
+Explicit answers may be thorough when the question warrants it. Suggested next directions are optional learning offers, never quizzes; `<leader>mq` also accepts an unrelated follow-up about the same response.
 
 Language support is declared once in `lua/custom/tutor_languages.lua`. Each profile supplies its filetypes, extensions, Tree-sitter parser, protocol metadata, and concept namespace; tutor eligibility, prompts, rendering, autocmds, and parser installation derive from that registry.
 
