@@ -239,6 +239,23 @@ function M.setup()
             vim.notify('clangd not found: install with `sudo pacman -S clang`', vim.log.levels.WARN)
         end
 
+        -- SourceKit-LSP ships with Xcode. Keep it Swift-only so clangd remains
+        -- the sole owner of C-family buffers.
+        if vim.fn.has 'macunix' == 1 and vim.fn.executable 'xcrun' == 1 then
+            local default_developer_dir = '/Applications/Xcode.app/Contents/Developer'
+            if (not vim.env.DEVELOPER_DIR or vim.env.DEVELOPER_DIR == '') and vim.fn.isdirectory(default_developer_dir) == 1 then
+                vim.env.DEVELOPER_DIR = default_developer_dir
+            end
+
+            vim.lsp.config('sourcekit', {
+                cmd = { 'xcrun', 'sourcekit-lsp' },
+                cmd_env = { DEVELOPER_DIR = vim.env.DEVELOPER_DIR },
+                filetypes = { 'swift' },
+                capabilities = vim.tbl_deep_extend('force', {}, capabilities),
+            })
+            vim.lsp.enable 'sourcekit'
+        end
+
         local function find_haxe_root(fname)
             return vim.fs.root(fname, function(name) return name:match '%.hxml$' ~= nil end)
                 or vim.fs.root(fname, { 'Project.xml', 'project.xml', 'haxelib.json', '.git' })
@@ -329,6 +346,7 @@ function M.setup()
             markdown = { 'prettier' },
             html = { 'prettier' },
             css = { 'prettier' },
+            swift = { 'swiftformat' },
             cs = { 'csharpier' },
         },
     }

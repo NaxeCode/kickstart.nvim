@@ -37,6 +37,7 @@ function M.setup()
             },
         },
         spec = {
+            { '<leader>a', group = '[A]pple / Swift' },
             { '<leader>c', group = '[C]odex' },
             { '<leader>d', group = '[D]ebug' },
             { '<leader>s', group = '[S]earch' },

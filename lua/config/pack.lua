@@ -57,6 +57,7 @@ local setup_modules = {
     'plugins.gitsigns',
     'plugins.treesitter',
     'plugins.lsp',
+    'plugins.swift',
     'plugins.tailwind-tools',
     'plugins.csharp',
     'plugins.tiny-inline-diagnostic',

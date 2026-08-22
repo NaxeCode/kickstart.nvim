@@ -24,6 +24,8 @@ local parsers = {
     'yaml',
 }
 
+if vim.fn.has 'macunix' == 1 then parsers[#parsers + 1] = 'swift' end
+
 local M = {}
 
 function M.register_haxe_parser()
