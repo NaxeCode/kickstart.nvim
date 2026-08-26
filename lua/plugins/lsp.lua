@@ -162,7 +162,6 @@ function M.setup()
                 filetypes = { 'c', 'cpp', 'objc', 'objcpp' },
                 root_markers = { 'compile_commands.json', 'compile_flags.txt', 'Makefile', '.git' },
             },
-            ts_ls = {},
             eslint = {},
             html = {},
             cssls = {},
@@ -199,25 +198,25 @@ function M.setup()
             },
         }
 
-        -- Configure Mason and use the modern API for each server
+        -- Configure project servers with Neovim's native LSP API. Mason installs
+        -- and enables the managed servers, while dedicated clients own TypeScript.
+        for server_name, config in pairs(servers) do
+            if server_name ~= 'nushell' and server_name ~= 'clangd' then
+                config.capabilities = vim.tbl_deep_extend('force', {}, capabilities, config.capabilities or {})
+                vim.lsp.config(server_name, config)
+            end
+        end
+
         require('mason-lspconfig').setup {
             -- nushell and clangd are provided by the system, not Mason.
             ensure_installed = vim.tbl_filter(function(name) return name ~= 'nushell' and name ~= 'clangd' end, vim.tbl_keys(servers)),
-            handlers = {
-                function(server_name)
-                    local config = servers[server_name] or {}
-                    config.capabilities = vim.tbl_deep_extend('force', {}, capabilities, config.capabilities or {})
-
-                    -- Use the new native config API if available, fallback to old for stability
-                    if vim.lsp.config then
-                        vim.lsp.config(server_name, config)
-                        vim.lsp.enable(server_name)
-                    else
-                        require('lspconfig')[server_name].setup(config)
-                    end
-                end,
-            },
+            -- typescript-tools.nvim is the sole TypeScript language client.
+            automatic_enable = { exclude = { 'ts_ls' } },
         }
+
+        -- Use each JavaScript/TypeScript project's own Oxlint version for diagnostics
+        -- and code actions. The nvim-lspconfig definition resolves node_modules/.bin/oxlint.
+        vim.lsp.enable 'oxlint'
 
         -- Manually setup nushell since it's not in Mason (as per GEMINI.md)
         local nushell_config = servers.nushell or {}
