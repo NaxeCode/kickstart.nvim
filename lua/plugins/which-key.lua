@@ -40,11 +40,12 @@ function M.setup()
             { '<leader>a', group = '[A]pple / Swift' },
             { '<leader>c', group = '[C]odex' },
             { '<leader>d', group = '[D]ebug' },
+            { '<leader>o', group = '[O]verseer tasks' },
             { '<leader>s', group = '[S]earch' },
             { '<leader>t', group = '[T]oggle' },
             { '<leader>p', group = '[P]anels / splits' },
             { '<leader>h', group = 'Git [H]unk', mode = { 'n', 'v' } },
-            { '<leader>x', group = 'E[x]ecute / Game tasks' },
+            { '<leader>x', group = 'E[x]ecute / problems' },
             { '<leader>m', group = '[M]ake / C + raylib' },
         },
     }

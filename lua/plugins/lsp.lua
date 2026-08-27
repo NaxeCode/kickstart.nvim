@@ -322,36 +322,66 @@ function M.setup()
         }
     end
 
+    local prettier_filetypes = {
+        javascript = true,
+        javascriptreact = true,
+        typescript = true,
+        typescriptreact = true,
+        json = true,
+        jsonc = true,
+        yaml = true,
+        markdown = true,
+        html = true,
+        css = true,
+    }
     local formatters_by_ft = {
         lua = { 'stylua' },
-        javascript = { 'prettier' },
-        javascriptreact = { 'prettier' },
-        typescript = { 'prettier' },
-        typescriptreact = { 'prettier' },
-        json = { 'prettier' },
-        jsonc = { 'prettier' },
-        yaml = { 'prettier' },
-        markdown = { 'prettier' },
-        html = { 'prettier' },
-        css = { 'prettier' },
         cs = { 'csharpier' },
     }
     if vim.fn.has 'macunix' == 1 then formatters_by_ft.swift = { 'swiftformat' } end
+
+    local function project_prettier(dirname) return vim.fs.find('node_modules/.bin/prettier', { path = dirname, upward = true, limit = 1 })[1] end
+
+    local function buffer_dir(bufnr)
+        local filename = vim.api.nvim_buf_get_name(bufnr)
+        return filename ~= '' and vim.fs.dirname(filename) or vim.uv.cwd()
+    end
+
+    local function format_options(bufnr)
+        local is_web = prettier_filetypes[vim.bo[bufnr].filetype]
+        return {
+            timeout_ms = 500,
+            -- Web projects should use the formatter they declare, not a
+            -- globally installed formatter or tsserver's different defaults.
+            formatters = is_web and { 'prettier' } or nil,
+            lsp_format = is_web and 'never' or 'fallback',
+        }
+    end
+
+    local function has_configured_formatter(bufnr) return not prettier_filetypes[vim.bo[bufnr].filetype] or project_prettier(buffer_dir(bufnr)) ~= nil end
 
     require('conform').setup {
         notify_on_error = false,
         format_on_save = function(bufnr)
             local disable_filetypes = { c = true, cpp = true }
-            if disable_filetypes[vim.bo[bufnr].filetype] then return nil end
-            return { timeout_ms = 500, lsp_format = 'fallback' }
+            if disable_filetypes[vim.bo[bufnr].filetype] or not has_configured_formatter(bufnr) then return nil end
+            return format_options(bufnr)
         end,
         formatters = {
-            prettier = { prepend_args = { '--tab-width', tostring(indent_width) } },
+            prettier = {
+                command = function(_, ctx) return project_prettier(ctx.dirname) or 'prettier' end,
+                condition = function(_, ctx) return project_prettier(ctx.dirname) ~= nil end,
+                prepend_args = { '--tab-width', tostring(indent_width) },
+            },
             stylua = { prepend_args = { '--indent-width', tostring(indent_width) } },
         },
         formatters_by_ft = formatters_by_ft,
     }
-    vim.keymap.set({ 'n', 'v' }, '<leader>f', function() require('conform').format { async = true, lsp_format = 'fallback' } end, { desc = '[F]ormat buffer' })
+    vim.keymap.set({ 'n', 'v' }, '<leader>f', function()
+        local bufnr = vim.api.nvim_get_current_buf()
+        if not has_configured_formatter(bufnr) then return end
+        require('conform').format(vim.tbl_extend('force', format_options(bufnr), { bufnr = bufnr, async = true }))
+    end, { desc = '[F]ormat buffer' })
 
     require('luasnip').setup {}
     require('blink.cmp').setup {
@@ -381,8 +411,36 @@ function M.setup()
         signature = { enabled = true },
     }
 
+    local typescript_filetypes = { 'javascript', 'javascriptreact', 'typescript', 'typescriptreact', 'vue' }
+    local typescript_filetype_set = {}
+    for _, filetype in ipairs(typescript_filetypes) do
+        typescript_filetype_set[filetype] = true
+    end
+
+    local function start_typescript(dispatchers)
+        local rpc = require 'typescript-tools.rpc'
+        local util = require 'typescript-tools.utils'
+        local function start() return rpc.start(dispatchers) end
+        local function is_typescript_buffer(bufnr)
+            return typescript_filetype_set[vim.bo[bufnr].filetype] and util.bufname_valid(vim.api.nvim_buf_get_name(bufnr))
+        end
+
+        local current = vim.api.nvim_get_current_buf()
+        if is_typescript_buffer(current) then return start() end
+
+        -- The plugin resolves tsserver from the current buffer rather than the
+        -- buffer starting the client. Keep delayed launches tied to the project
+        -- buffer when another window (for example, :checkhealth) has focus.
+        for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
+            if vim.api.nvim_buf_is_loaded(bufnr) and is_typescript_buffer(bufnr) then return vim.api.nvim_buf_call(bufnr, start) end
+        end
+
+        return start()
+    end
+
     require('typescript-tools').setup {
-        filetypes = { 'javascript', 'javascriptreact', 'typescript', 'typescriptreact', 'vue' },
+        cmd = start_typescript,
+        filetypes = typescript_filetypes,
         settings = {
             tsserver_file_preferences = {
                 includeCompletionsForModuleExports = true,

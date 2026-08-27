@@ -21,6 +21,7 @@ local parsers = {
     'typescript',
     'vim',
     'vimdoc',
+    'xml',
     'yaml',
 }
 
@@ -29,7 +30,10 @@ for _, parser in ipairs(parsers) do
     parser_set[parser] = true
 end
 for _, parser in ipairs(require('custom.tutor_languages').parsers()) do
-    if not parser_set[parser] then parsers[#parsers + 1] = parser end
+    if not parser_set[parser] then
+        parsers[#parsers + 1] = parser
+        parser_set[parser] = true
+    end
 end
 
 local M = {}
@@ -61,20 +65,44 @@ function M.setup()
     -- Highlighting is handled natively by Neovim for installed parsers.
     require('nvim-treesitter').setup()
 
-    -- Install any missing parsers on startup
+    -- Install missing parsers and repair query links left behind when the
+    -- package directory moves (for example, after changing package managers).
     vim.api.nvim_create_autocmd('VimEnter', {
         once = true,
         callback = function()
-            local installed = require('nvim-treesitter.config').get_installed 'parsers'
+            local ts_config = require 'nvim-treesitter.config'
+            local installed = ts_config.get_installed 'parsers'
             local installed_set = {}
             for _, p in ipairs(installed) do
                 installed_set[p] = true
             end
-            local missing = vim.tbl_filter(function(p) return not installed_set[p] end, parsers)
-            if #missing > 0 then require('nvim-treesitter.install').install(missing, { summary = true }) end
+
+            local query_dir = ts_config.get_install_dir 'queries'
+            local repair = vim.tbl_filter(function(parser) return not installed_set[parser] or not vim.uv.fs_realpath(query_dir .. '/' .. parser) end, parsers)
+            if #repair == 0 then return end
+
+            require('nvim-treesitter.install').install(repair, { force = true, summary = true }):await(function(err)
+                if err then
+                    vim.schedule(function() vim.notify('Tree-sitter repair failed: ' .. err, vim.log.levels.ERROR) end)
+                    return
+                end
+
+                vim.schedule(function()
+                    vim.treesitter.query.get:clear()
+                    for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
+                        if vim.api.nvim_buf_is_loaded(bufnr) then
+                            local ft = vim.bo[bufnr].filetype
+                            local ok, lang = pcall(vim.treesitter.language.get_lang, ft)
+                            if ok and parser_set[lang] then
+                                vim.treesitter.stop(bufnr)
+                                pcall(vim.treesitter.start, bufnr, lang)
+                            end
+                        end
+                    end
+                end)
+            end)
         end,
     })
-
     -- The new nvim-treesitter no longer sets up highlight autocmds.
     -- Explicitly start treesitter highlighting for every buffer whose
     -- filetype has an installed parser.

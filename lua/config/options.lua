@@ -56,6 +56,17 @@ opt.completeopt = { 'menuone', 'noselect' }
 -- Better display for messages
 opt.shortmess:append 'c'
 
+-- Responsive feedback and stable editing viewport
+opt.updatetime = 250
+opt.timeoutlen = 500
+opt.signcolumn = 'yes'
+opt.scrolloff = 8
+opt.sidescrolloff = 8
+
+-- Editing safety
+opt.undofile = true
+opt.confirm = true
+
 -- Enable mouse
 opt.mouse = 'a'
 

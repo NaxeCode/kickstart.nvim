@@ -4,7 +4,7 @@ function M.setup()
     require('nvim-web-devicons').setup {}
     require('Comment').setup {}
     require('colorizer').setup {
-        filetypes = { 'css', 'html', 'tsx', 'jsx' },
+        filetypes = { 'css', 'html', 'javascriptreact', 'typescriptreact', 'svg' },
         user_default_options = { tailwind = true },
     }
     require('ibl').setup {
